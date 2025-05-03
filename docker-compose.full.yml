@@ -1,0 +1,291 @@
+version: '3.8'
+
+x-base-peer: &base-peer-def
+  environment:
+    - FABRIC_LOGGING_SPEC=INFO
+    - CORE_PEER_TLS_ENABLED=true
+    - CORE_PEER_GOSSIP_USELEADERELECTION=true
+    - CORE_PEER_GOSSIP_ORGLEADER=false
+    - CORE_PEER_PROFILE_ENABLED=false
+    - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+    - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+    - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+    - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+    - CORE_METRICS_PROVIDER=prometheus
+    - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9443
+  volumes:
+    - /var/run/docker.sock:/host/var/run/docker.sock
+  command: peer node start
+  networks:
+    - supply-net
+
+services:
+  # ORDERING SERVICE
+  orderer.example.com:
+    container_name: orderer.example.com
+    image: hyperledger/fabric-orderer:3.1.0
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:9443
+      - ORDERER_METRICS_PROVIDER=prometheus
+      # TLS settings
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+    volumes:
+      - ./network/artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ./network/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp:/var/hyperledger/orderer/msp
+      - ./network/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls:/var/hyperledger/orderer/tls
+    ports:
+      - 7050:7050
+      - 7443:9443
+    networks:
+      - supply-net
+
+  # MANUFACTURER PEER
+  peer0.manufacturer.example.com:
+    <<: *base-peer-def
+    container_name: peer0.manufacturer.example.com
+    image: hyperledger/fabric-peer:3.1.0
+    environment:
+      - CORE_PEER_ID=peer0.manufacturer.example.com
+      - CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.manufacturer.example.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.manufacturer.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.manufacturer.example.com:7051
+      - CORE_PEER_LOCALMSPID=ManufacturerMSP
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_CHAINCODE_BUILDER=hyperledger/fabric-ccenv:latest
+    volumes:
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls:/etc/hyperledger/fabric/tls
+    ports:
+      - 7051:7051
+      - 9443:9443
+    depends_on:
+      - couchdb1
+    networks:
+      - supply-net
+
+  # TRANSPORTER PEER
+  peer0.transporter.example.com:
+    <<: *base-peer-def
+    container_name: peer0.transporter.example.com
+    image: hyperledger/fabric-peer:3.1.0
+    environment:
+      - CORE_PEER_ID=peer0.transporter.example.com
+      - CORE_PEER_ADDRESS=peer0.transporter.example.com:8051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:8051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.transporter.example.com:8052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.transporter.example.com:8051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.transporter.example.com:8051
+      - CORE_PEER_LOCALMSPID=TransporterMSP
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb2:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - ./network/crypto-config/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./network/crypto-config/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/tls:/etc/hyperledger/fabric/tls
+    ports:
+      - 8051:8051
+    depends_on:
+      - couchdb2
+    networks:
+      - supply-net
+
+  # WAREHOUSE PEER
+  peer0.warehouse.example.com:
+    <<: *base-peer-def
+    container_name: peer0.warehouse.example.com
+    image: hyperledger/fabric-peer:3.1.0
+    environment:
+      - CORE_PEER_ID=peer0.warehouse.example.com
+      - CORE_PEER_ADDRESS=peer0.warehouse.example.com:9051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.warehouse.example.com:9052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.warehouse.example.com:9051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.warehouse.example.com:9051
+      - CORE_PEER_LOCALMSPID=WarehouseMSP
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb3:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - ./network/crypto-config/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./network/crypto-config/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls:/etc/hyperledger/fabric/tls
+    ports:
+      - 9051:9051
+    depends_on:
+      - couchdb3
+    networks:
+      - supply-net
+
+  # RETAILER PEER
+  peer0.retailer.example.com:
+    <<: *base-peer-def
+    container_name: peer0.retailer.example.com
+    image: hyperledger/fabric-peer:3.1.0
+    environment:
+      - CORE_PEER_ID=peer0.retailer.example.com
+      - CORE_PEER_ADDRESS=peer0.retailer.example.com:10051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:10051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.retailer.example.com:10052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:10052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.retailer.example.com:10051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.retailer.example.com:10051
+      - CORE_PEER_LOCALMSPID=RetailerMSP
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb4:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - ./network/crypto-config/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./network/crypto-config/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls:/etc/hyperledger/fabric/tls
+    ports:
+      - 10051:10051
+    depends_on:
+      - couchdb4
+    networks:
+      - supply-net
+
+  # COUCHDB INSTANCES
+  couchdb1:
+    container_name: couchdb1
+    image: couchdb:3.3.2
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 5984:5984
+    networks:
+      - supply-net
+
+  couchdb2:
+    container_name: couchdb2
+    image: couchdb:3.3.2
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 6984:5984
+    networks:
+      - supply-net
+
+  couchdb3:
+    container_name: couchdb3
+    image: couchdb:3.3.2
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 7984:5984
+    networks:
+      - supply-net
+
+  couchdb4:
+    container_name: couchdb4
+    image: couchdb:3.3.2
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 8984:5984
+    networks:
+      - supply-net
+
+  # EVENT LISTENER SERVICE
+  listener:
+    container_name: listener
+    build:
+      context: ./services/listener
+      dockerfile: Dockerfile
+    environment:
+      - CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/tls/ca.crt
+      - CHANNEL_NAME=supplychain
+    volumes:
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp:/etc/hyperledger/msp
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt:/etc/hyperledger/tls/ca.crt
+    ports:
+      - 3001:3001
+    depends_on:
+      - peer0.manufacturer.example.com
+    networks:
+      - supply-net
+
+  # NEXTJS FRONTEND APP
+  app:
+    container_name: app
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_WS_URL=ws://localhost:3001/ws
+      - FABRIC_GATEWAY_MSP=ManufacturerMSP
+      - FABRIC_GATEWAY_PEER=peer0.manufacturer.example.com:7051
+      - FABRIC_CHANNEL=supplychain
+      - FABRIC_CHAINCODE=shipping
+      - CERT_PATH=/etc/hyperledger/manufacturer/cert.pem
+      - KEY_PATH=/etc/hyperledger/manufacturer/priv.pem
+      - TLS_CERT_PATH=/etc/hyperledger/manufacturer/ca.crt
+    volumes:
+      - ./network/wallets/manufacturer:/etc/hyperledger/manufacturer
+    ports:
+      - 3000:3000
+    depends_on:
+      - listener
+    networks:
+      - supply-net
+
+  # PROMETHEUS & GRAFANA
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - supply-net
+
+  grafana:
+    image: grafana/grafana:11.0.2
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - ./monitoring/dashboards:/var/lib/grafana/dashboards
+      - ./monitoring/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    ports:
+      - "3002:3000"
+    restart: unless-stopped
+    networks:
+      - supply-net
+
+networks:
+  supply-net:
+    driver: bridge

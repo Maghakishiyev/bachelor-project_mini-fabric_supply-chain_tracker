@@ -1,0 +1,270 @@
+version: "3.9"
+
+x-common: &common
+  image: hyperledger/fabric-peer:${FABRIC_VERSION:-3.1.0}
+  environment:
+    - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+    - FABRIC_LOGGING_SPEC=INFO
+    - CORE_PEER_TLS_ENABLED=true
+    - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+    - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+    - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+    - CORE_PEER_GOSSIP_USELEADERELECTION=true
+    - CORE_PEER_GOSSIP_ORGLEADER=false
+    - CORE_PEER_PROFILE_ENABLED=true
+    - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+  working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+  command: peer node start
+  volumes:
+    - /var/run/docker.sock:/host/var/run/docker.sock
+    - ./network/crypto-config:/etc/hyperledger/fabric/crypto-config
+  networks:
+    - fabric
+
+x-couchdb: &couchdb
+  image: couchdb:3.3.2
+  environment:
+    - COUCHDB_USER=admin
+    - COUCHDB_PASSWORD=adminpw
+  networks:
+    - fabric
+
+services:
+  orderer.example.com:
+    image: hyperledger/fabric-orderer:${FABRIC_VERSION:-3.1.0}
+    container_name: orderer.example.com
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: orderer
+    volumes:
+      - ./network/genesis.block:/var/hyperledger/orderer/genesis.block
+      - ./network/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp:/var/hyperledger/orderer/msp
+      - ./network/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls:/var/hyperledger/orderer/tls
+    ports:
+      - "7050:7050"
+    networks:
+      - fabric
+
+  peer0.manufacturer.example.com:
+    <<: *common
+    container_name: peer0.manufacturer.example.com
+    environment:
+      <<: *common # Merge from x-common
+      - CORE_PEER_ID=peer0.manufacturer.example.com
+      - CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.manufacturer.example.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.manufacturer.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.manufacturer.example.com:7051
+      - CORE_PEER_LOCALMSPID=ManufacturerMSP
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls:/etc/hyperledger/fabric/tls
+    ports:
+      - "7051:7051"
+    depends_on:
+      - couchdb1
+    networks:
+      - fabric
+
+  couchdb1:
+    <<: *couchdb
+    container_name: couchdb1
+    ports:
+      - "5984:5984"
+
+  peer0.transporter.example.com:
+    <<: *common
+    container_name: peer0.transporter.example.com
+    environment:
+      <<: *common # Merge from x-common
+      - CORE_PEER_ID=peer0.transporter.example.com
+      - CORE_PEER_ADDRESS=peer0.transporter.example.com:8051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:8051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.transporter.example.com:8052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.transporter.example.com:8051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.transporter.example.com:8051
+      - CORE_PEER_LOCALMSPID=TransporterMSP
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb2:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - ./network/crypto-config/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./network/crypto-config/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/tls:/etc/hyperledger/fabric/tls
+    ports:
+      - "8051:8051"
+    depends_on:
+      - couchdb2
+    networks:
+      - fabric
+
+  couchdb2:
+    <<: *couchdb
+    container_name: couchdb2
+    ports:
+      - "6984:5984"
+
+  peer0.warehouse.example.com:
+    <<: *common
+    container_name: peer0.warehouse.example.com
+    environment:
+      <<: *common # Merge from x-common
+      - CORE_PEER_ID=peer0.warehouse.example.com
+      - CORE_PEER_ADDRESS=peer0.warehouse.example.com:9051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.warehouse.example.com:9052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.warehouse.example.com:9051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.warehouse.example.com:9051
+      - CORE_PEER_LOCALMSPID=WarehouseMSP
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb3:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - ./network/crypto-config/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./network/crypto-config/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls:/etc/hyperledger/fabric/tls
+    ports:
+      - "9051:9051"
+    depends_on:
+      - couchdb3
+    networks:
+      - fabric
+
+  couchdb3:
+    <<: *couchdb
+    container_name: couchdb3
+    ports:
+      - "7984:5984"
+
+  peer0.retailer.example.com:
+    <<: *common
+    container_name: peer0.retailer.example.com
+    environment:
+      <<: *common # Merge from x-common
+      - CORE_PEER_ID=peer0.retailer.example.com
+      - CORE_PEER_ADDRESS=peer0.retailer.example.com:10051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:10051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.retailer.example.com:10052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:10052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.retailer.example.com:10051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.retailer.example.com:10051
+      - CORE_PEER_LOCALMSPID=RetailerMSP
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb4:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - ./network/crypto-config/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/msp:/etc/hyperledger/fabric/msp
+      - ./network/crypto-config/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls:/etc/hyperledger/fabric/tls
+    ports:
+      - "10051:10051"
+    depends_on:
+      - couchdb4
+    networks:
+      - fabric
+
+  couchdb4:
+    <<: *couchdb
+    container_name: couchdb4
+    ports:
+      - "8984:5984"
+
+  cli:
+    container_name: cli
+    image: hyperledger/fabric-tools:${FABRIC_VERSION:-3.1.0}
+    tty: true
+    stdin_open: true
+    environment:
+      - GOPATH=/opt/gopath
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051
+      - CORE_PEER_LOCALMSPID=ManufacturerMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt
+      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: /bin/bash
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./network/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto
+      - ./network/channel.tx:/opt/gopath/src/github.com/hyperledger/fabric/peer/configtx/channel.tx
+      - ./chaincode:/opt/gopath/src/github.com/hyperledger/fabric/peer/chaincode
+    networks:
+      - fabric
+    depends_on:
+      - peer0.manufacturer.example.com
+      - peer0.transporter.example.com
+      - peer0.warehouse.example.com
+      - peer0.retailer.example.com
+
+  # Event listener service - Go application that streams block events via WebSocket
+  listener:
+    build: ./services/listener
+    container_name: listener
+    environment:
+      - MSP_ID=ManufacturerMSP
+      - PEER_ENDPOINT=peer0.manufacturer.example.com:7051
+      - CERT_PATH=/crypto/admin-cert.pem
+      - KEY_PATH=/crypto/admin-key.pem
+      - TLS_CA=/crypto/ca.pem
+      - WS_PORT=3001
+    volumes:
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/signcerts/:/crypto/admin-cert.pem:ro
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/keystore/:/crypto/admin-key.pem:ro
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt:/crypto/ca.pem:ro
+    ports:
+      - "3001:3001"
+    depends_on:
+      - peer0.manufacturer.example.com
+    networks:
+      - fabric
+
+  # Next.js frontend application
+  app:
+    build: ./app
+    container_name: webapp
+    environment:
+      - NEXT_PUBLIC_WS_URL=ws://localhost:3001/ws
+      - MSP_ID=RetailerMSP
+      - PEER_ENDPOINT=peer0.retailer.example.com:10051
+      - CHANNEL_NAME=supplychain
+      - CHAINCODE_NAME=shipping
+      - CRYPTO_PATH=/crypto
+    volumes:
+      - ./network/crypto-config/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp/signcerts/:/crypto/admin-cert.pem:ro
+      - ./network/crypto-config/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp/keystore/:/crypto/admin-key.pem:ro
+      - ./network/crypto-config/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt:/crypto/ca.pem:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - listener
+      - peer0.retailer.example.com
+    networks:
+      - fabric
+
+networks:
+  fabric:
+    name: fabric_network

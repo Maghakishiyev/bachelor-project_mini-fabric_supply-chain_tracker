@@ -1,0 +1,22 @@
+FROM hyperledger/fabric-peer:3.1.0
+
+# Install necessary tools
+USER root
+RUN apt-get update && apt-get install -y \
+    git \
+    make \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and build the chaincode
+COPY chaincode/shipping /opt/chaincode/shipping
+WORKDIR /opt/chaincode/shipping
+RUN go mod download
+RUN go build -o /opt/chaincode/shipping/shipping
+
+# Configure external builders path for pre-installed chaincode
+COPY network/scripts/cc_deploy.sh /opt/scripts/
+RUN chmod +x /opt/scripts/cc_deploy.sh
+
+# Return to peer user
+USER 1000

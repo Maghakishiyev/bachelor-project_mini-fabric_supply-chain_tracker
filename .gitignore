@@ -134,3 +134,12 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Fabric specific
+*.tar.gz
+network/crypto-config
+network/*.block
+
+
+CLAUDE.md
+CLAUDE_SESSION.md

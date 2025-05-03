@@ -1,0 +1,58 @@
+---
+name: supply-chain-network-retailer
+version: 1.0.0
+client:
+  organization: RetailerMSP
+  connection:
+    timeout:
+      peer:
+        endorser: 300
+        eventHub: 300
+        eventReg: 300
+      orderer: 300
+
+channels:
+  supplychain:
+    orderers:
+      - orderer.example.com
+    peers:
+      peer0.retailer.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+organizations:
+  RetailerMSP:
+    mspid: RetailerMSP
+    peers:
+      - peer0.retailer.example.com
+    certificateAuthorities:
+      - ca.retailer.example.com
+
+orderers:
+  orderer.example.com:
+    url: grpcs://localhost:7050
+    tlsCACerts:
+      path: ../crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/ca.crt
+    grpcOptions:
+      ssl-target-name-override: orderer.example.com
+      hostnameOverride: orderer.example.com
+
+peers:
+  peer0.retailer.example.com:
+    url: grpcs://localhost:10051
+    tlsCACerts:
+      path: ../crypto-config/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt
+    grpcOptions:
+      ssl-target-name-override: peer0.retailer.example.com
+      hostnameOverride: peer0.retailer.example.com
+
+certificateAuthorities:
+  ca.retailer.example.com:
+    url: https://localhost:10054
+    caName: ca.retailer.example.com
+    tlsCACerts:
+      path: ../crypto-config/peerOrganizations/retailer.example.com/ca/ca.retailer.example.com-cert.pem
+    httpOptions:
+      verify: false

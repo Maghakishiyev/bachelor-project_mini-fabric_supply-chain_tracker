@@ -1,0 +1,58 @@
+---
+name: supply-chain-network-warehouse
+version: 1.0.0
+client:
+  organization: WarehouseMSP
+  connection:
+    timeout:
+      peer:
+        endorser: 300
+        eventHub: 300
+        eventReg: 300
+      orderer: 300
+
+channels:
+  supplychain:
+    orderers:
+      - orderer.example.com
+    peers:
+      peer0.warehouse.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+organizations:
+  WarehouseMSP:
+    mspid: WarehouseMSP
+    peers:
+      - peer0.warehouse.example.com
+    certificateAuthorities:
+      - ca.warehouse.example.com
+
+orderers:
+  orderer.example.com:
+    url: grpcs://localhost:7050
+    tlsCACerts:
+      path: ../crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/ca.crt
+    grpcOptions:
+      ssl-target-name-override: orderer.example.com
+      hostnameOverride: orderer.example.com
+
+peers:
+  peer0.warehouse.example.com:
+    url: grpcs://localhost:9051
+    tlsCACerts:
+      path: ../crypto-config/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls/ca.crt
+    grpcOptions:
+      ssl-target-name-override: peer0.warehouse.example.com
+      hostnameOverride: peer0.warehouse.example.com
+
+certificateAuthorities:
+  ca.warehouse.example.com:
+    url: https://localhost:9054
+    caName: ca.warehouse.example.com
+    tlsCACerts:
+      path: ../crypto-config/peerOrganizations/warehouse.example.com/ca/ca.warehouse.example.com-cert.pem
+    httpOptions:
+      verify: false

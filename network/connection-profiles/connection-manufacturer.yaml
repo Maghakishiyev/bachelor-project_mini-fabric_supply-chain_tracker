@@ -1,0 +1,58 @@
+---
+name: supply-chain-network-manufacturer
+version: 1.0.0
+client:
+  organization: ManufacturerMSP
+  connection:
+    timeout:
+      peer:
+        endorser: 300
+        eventHub: 300
+        eventReg: 300
+      orderer: 300
+
+channels:
+  supplychain:
+    orderers:
+      - orderer.example.com
+    peers:
+      peer0.manufacturer.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+organizations:
+  ManufacturerMSP:
+    mspid: ManufacturerMSP
+    peers:
+      - peer0.manufacturer.example.com
+    certificateAuthorities:
+      - ca.manufacturer.example.com
+
+orderers:
+  orderer.example.com:
+    url: grpcs://localhost:7050
+    tlsCACerts:
+      path: ../crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/ca.crt
+    grpcOptions:
+      ssl-target-name-override: orderer.example.com
+      hostnameOverride: orderer.example.com
+
+peers:
+  peer0.manufacturer.example.com:
+    url: grpcs://localhost:7051
+    tlsCACerts:
+      path: ../crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt
+    grpcOptions:
+      ssl-target-name-override: peer0.manufacturer.example.com
+      hostnameOverride: peer0.manufacturer.example.com
+
+certificateAuthorities:
+  ca.manufacturer.example.com:
+    url: https://localhost:7054
+    caName: ca.manufacturer.example.com
+    tlsCACerts:
+      path: ../crypto-config/peerOrganizations/manufacturer.example.com/ca/ca.manufacturer.example.com-cert.pem
+    httpOptions:
+      verify: false

@@ -1,0 +1,32 @@
+version: "3"
+services:
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - monitoring-net
+
+  grafana:
+    image: grafana/grafana:11.0.2
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - ./dashboards:/var/lib/grafana/dashboards
+      - ./provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    ports:
+      - "3002:3000"
+    restart: unless-stopped
+    networks:
+      - monitoring-net
+
+networks:
+  monitoring-net:
+    driver: bridge
