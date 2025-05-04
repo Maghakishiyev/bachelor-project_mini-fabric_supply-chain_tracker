@@ -13,8 +13,6 @@ Organizations:
       Admins:
         Type: Signature
         Rule: "OR('OrdererMSP.admin')"
-    OrdererEndpoints:
-      - orderer.example.com:7050
 
   - &ManufacturerMSP
     Name: ManufacturerMSP
@@ -102,11 +100,11 @@ Organizations:
 
 Capabilities:
   Channel: &ChannelCapabilities
-    V3_1: true
+    V2_0: true
   Orderer: &OrdererCapabilities
-    V3_1: true
+    V2_0: true
   Application: &ApplicationCapabilities
-    V3_1: true
+    V2_0: true
 
 Application: &ApplicationDefaults
   Organizations:

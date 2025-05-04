@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 export FABRIC_CFG_PATH=$PWD
+export PATH=$PATH:$(cd .. && pwd)/bin
 
 # Source environment variables if not set
 if [ -z "${SYS_CHANNEL:-}" ]; then

@@ -1,7 +1,7 @@
 version: "3.9"
 
 x-common: &common
-  image: hyperledger/fabric-peer:${FABRIC_VERSION:-3.1.0}
+  image: hyperledger/fabric-peer:${FABRIC_VERSION:-2.5.5}
   environment:
     - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
     - FABRIC_LOGGING_SPEC=INFO
@@ -9,10 +9,14 @@ x-common: &common
     - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
     - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
     - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+    - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric_network
+    - CORE_PEER_TLS_CLIENTAUTHREQUIRED=false
+    - CORE_PEER_GOSSIP_SKIPHANDSHAKE=true
     - CORE_PEER_GOSSIP_USELEADERELECTION=true
     - CORE_PEER_GOSSIP_ORGLEADER=false
     - CORE_PEER_PROFILE_ENABLED=true
     - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+    - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
   working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
   command: peer node start
   volumes:
@@ -31,7 +35,7 @@ x-couchdb: &couchdb
 
 services:
   orderer.example.com:
-    image: hyperledger/fabric-orderer:${FABRIC_VERSION:-3.1.0}
+    image: hyperledger/fabric-orderer:${FABRIC_VERSION:-2.5.5}
     container_name: orderer.example.com
     environment:
       - FABRIC_LOGGING_SPEC=INFO
@@ -45,6 +49,7 @@ services:
       - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
       - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
       - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_OPERATIONS_TLS_ENABLED=false
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric
     command: orderer
     volumes:
@@ -60,7 +65,6 @@ services:
     <<: *common
     container_name: peer0.manufacturer.example.com
     environment:
-      <<: *common # Merge from x-common
       - CORE_PEER_ID=peer0.manufacturer.example.com
       - CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051
       - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
@@ -93,7 +97,6 @@ services:
     <<: *common
     container_name: peer0.transporter.example.com
     environment:
-      <<: *common # Merge from x-common
       - CORE_PEER_ID=peer0.transporter.example.com
       - CORE_PEER_ADDRESS=peer0.transporter.example.com:8051
       - CORE_PEER_LISTENADDRESS=0.0.0.0:8051
@@ -126,7 +129,6 @@ services:
     <<: *common
     container_name: peer0.warehouse.example.com
     environment:
-      <<: *common # Merge from x-common
       - CORE_PEER_ID=peer0.warehouse.example.com
       - CORE_PEER_ADDRESS=peer0.warehouse.example.com:9051
       - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
@@ -159,7 +161,6 @@ services:
     <<: *common
     container_name: peer0.retailer.example.com
     environment:
-      <<: *common # Merge from x-common
       - CORE_PEER_ID=peer0.retailer.example.com
       - CORE_PEER_ADDRESS=peer0.retailer.example.com:10051
       - CORE_PEER_LISTENADDRESS=0.0.0.0:10051
@@ -190,7 +191,7 @@ services:
 
   cli:
     container_name: cli
-    image: hyperledger/fabric-tools:${FABRIC_VERSION:-3.1.0}
+    image: hyperledger/fabric-tools:${FABRIC_VERSION:-2.5.5}
     tty: true
     stdin_open: true
     environment:
@@ -205,6 +206,7 @@ services:
       - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt
       - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp
+      - ORDERER_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: /bin/bash
     volumes:

@@ -1,6 +1,8 @@
+export FABRIC_VERSION := 2.5.5
 export SYS_CHANNEL ?= system-channel
 export APP_CHANNEL ?= supplychain
 export CHAINCODE_NAME ?= shipping
+export PATH := $(shell pwd)/bin:$(PATH)
 
 # Default values for load testing
 export RATE ?= 20
@@ -44,21 +46,29 @@ channel-join:
 	@docker exec -e "CORE_PEER_LOCALMSPID=ManufacturerMSP" \
 		-e "CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051" \
 		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp" \
+		-e "CORE_PEER_TLS_ENABLED=true" \
 		cli peer channel join -b /opt/gopath/src/github.com/hyperledger/fabric/peer/$(APP_CHANNEL).block
 	
 	@docker exec -e "CORE_PEER_LOCALMSPID=TransporterMSP" \
 		-e "CORE_PEER_ADDRESS=peer0.transporter.example.com:8051" \
 		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/transporter.example.com/users/Admin@transporter.example.com/msp" \
+		-e "CORE_PEER_TLS_ENABLED=true" \
 		cli peer channel join -b /opt/gopath/src/github.com/hyperledger/fabric/peer/$(APP_CHANNEL).block
 	
 	@docker exec -e "CORE_PEER_LOCALMSPID=WarehouseMSP" \
 		-e "CORE_PEER_ADDRESS=peer0.warehouse.example.com:9051" \
 		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/users/Admin@warehouse.example.com/msp" \
+		-e "CORE_PEER_TLS_ENABLED=true" \
 		cli peer channel join -b /opt/gopath/src/github.com/hyperledger/fabric/peer/$(APP_CHANNEL).block
 	
 	@docker exec -e "CORE_PEER_LOCALMSPID=RetailerMSP" \
 		-e "CORE_PEER_ADDRESS=peer0.retailer.example.com:10051" \
 		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp" \
+		-e "CORE_PEER_TLS_ENABLED=true" \
 		cli peer channel join -b /opt/gopath/src/github.com/hyperledger/fabric/peer/$(APP_CHANNEL).block
 	
 	@echo "All peers have joined the channel"

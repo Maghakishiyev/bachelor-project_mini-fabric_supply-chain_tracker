@@ -17,7 +17,7 @@ echo "Downloading Hyperledger Fabric CA version: ${CA_VERSION}"
 mkdir -p ./tmp
 
 # Download the Fabric binaries
-curl -sSL https://github.com/hyperledger/fabric/releases/download/v${FABRIC_VERSION}/hyperledger-fabric-${FABRIC_VERSION}.tar.gz | tar xz -C ./tmp
+curl -sSL https://github.com/hyperledger/fabric/releases/download/v${FABRIC_VERSION}/hyperledger-fabric-darwin-amd64-${FABRIC_VERSION}.tar.gz | tar xz -C ./tmp
 
 # Check if binaries were downloaded
 if [ ! -d "./tmp/bin" ]; then
@@ -25,21 +25,22 @@ if [ ! -d "./tmp/bin" ]; then
     exit 1
 fi
 
-# Move binaries to /usr/local/bin
-sudo mv ./tmp/bin/* /usr/local/bin/
+# Create local bin directory
+mkdir -p bin
+
+# Move binaries to local bin directory
+cp ./tmp/bin/* ./bin/
 
 # Clean up
 rm -rf ./tmp
 
-# Add to PATH
-echo "export PATH=\$PATH:/usr/local/bin" >> ~/.bash_profile
-echo "export PATH=\$PATH:/usr/local/bin" >> ~/.zshrc
+# Add to PATH (optional)
+echo "Binaries placed in ./bin directory"
 
 # Check installation
-echo "Installation complete. Verifying binaries:"
-peer version
-configtxgen --version
-cryptogen --version
+echo "Installation complete. Binaries available in ./bin directory:"
+ls -la ./bin/
+echo "Please add $(pwd)/bin to your PATH"
 
 echo "Hyperledger Fabric binaries have been installed successfully!"
 echo "Please restart your terminal or run 'source ~/.bash_profile' (or ~/.zshrc) to update your PATH."
