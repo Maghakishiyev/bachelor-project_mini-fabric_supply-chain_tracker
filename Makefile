@@ -8,7 +8,7 @@ export PATH := $(shell pwd)/bin:$(PATH)
 export RATE ?= 20
 export SECONDS ?= 300
 
-.PHONY: generate network-up network-down channel-create channel-join clean cc-package cc-install cc-approve cc-commit cc-deploy cc-test wallets logs all listener-up app-up loadtest metrics video monitoring monitoring-down full-stack
+.PHONY: generate network-up network-down channel-create channel-join clean cc-vendor cc-package cc-install cc-approve cc-commit cc-deploy cc-test wallets logs all listener-up app-up loadtest metrics video monitoring monitoring-down full-stack
 
 # Generate crypto material
 generate:
@@ -102,9 +102,15 @@ cc-test:
 	@cd chaincode/shipping && go test -v
 	@echo "Chaincode tests completed"
 
+# Vendor chaincode dependencies
+cc-vendor:
+	@echo "Vendoring chaincode dependencies on host..."
+	@cd chaincode/shipping && go mod tidy && go mod vendor
+
 # Package chaincode
 cc-package:
-	@echo "Packaging chaincode: $(CHAINCODE_NAME)"
+	@echo "Vendoring + packaging chaincode: $(CHAINCODE_NAME)"
+	@$(MAKE) cc-vendor
 	@docker exec cli peer lifecycle chaincode package /opt/gopath/src/github.com/hyperledger/fabric/peer/$(CHAINCODE_NAME).tar.gz \
 		--path /opt/gopath/src/github.com/hyperledger/fabric/peer/chaincode/$(CHAINCODE_NAME) \
 		--lang golang --label $(CHAINCODE_NAME)_1.0
