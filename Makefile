@@ -35,6 +35,7 @@ channel-create:
 	@echo "Creating channel: $(APP_CHANNEL)"
 	@docker exec -e "CORE_PEER_LOCALMSPID=ManufacturerMSP" \
 		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp" \
 		cli peer channel create -o orderer.example.com:7050 \
 		-c $(APP_CHANNEL) -f /opt/gopath/src/github.com/hyperledger/fabric/peer/configtx/channel.tx \
 		--outputBlock /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/$(APP_CHANNEL).block \
@@ -204,7 +205,7 @@ cc-deploy:
 	
 	@echo "1. Creating CCaaS metadata.json and connection.json..."
 	@echo '{"type":"ccaas","label":"shipping_1.0"}' > /tmp/shipping_ccaas/metadata.json
-	@echo '{"address":"localhost:9999","dial_timeout":"10s","tls_required":false}' > /tmp/shipping_ccaas/connection.json
+	@echo '{"address":"shipping-ccaas:9999","dial_timeout":"10s","tls_required":false}' > /tmp/shipping_ccaas/connection.json
 	@cd /tmp/shipping_ccaas && tar czf code.tar.gz connection.json
 	@cd /tmp/shipping_ccaas && tar czf shipping_1.0.tar.gz metadata.json code.tar.gz
 	@docker cp /tmp/shipping_ccaas/shipping_1.0.tar.gz cli:/opt/gopath/src/github.com/hyperledger/fabric/peer/shipping_1.0.tar.gz
@@ -375,6 +376,7 @@ app-up:
 # Full setup
 all: generate network-up 
 	@sleep 10
+	@docker cp network/crypto-config cli:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config
 	@$(MAKE) channel-create
 	@sleep 10
 	@$(MAKE) channel-join

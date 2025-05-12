@@ -280,15 +280,15 @@ services:
     container_name: webapp
     environment:
       - NEXT_PUBLIC_WS_URL=ws://localhost:3001/ws
-      - MSP_ID=RetailerMSP
-      - PEER_ENDPOINT=peer0.retailer.example.com:10051
+      - MSP_ID=ManufacturerMSP
+      - PEER_ENDPOINT=peer0.manufacturer.example.com:7051
       - CHANNEL_NAME=supplychain
       - CHAINCODE_NAME=shipping
       - CRYPTO_PATH=/crypto
     volumes:
-      - ./network/crypto-config/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp/signcerts/Admin@retailer.example.com-cert.pem:/crypto/admin-cert.pem:ro
-      - ./network/crypto-config/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp/keystore/priv_sk:/crypto/admin-key.pem:ro
-      - ./network/crypto-config/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt:/crypto/ca.pem:ro
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/signcerts/Admin@manufacturer.example.com-cert.pem:/crypto/admin-cert.pem:ro
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/keystore/priv_sk:/crypto/admin-key.pem:ro
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt:/crypto/ca.pem:ro
     ports:
       - "3000:3000"
     depends_on:
