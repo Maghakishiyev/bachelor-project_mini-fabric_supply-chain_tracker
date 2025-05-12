@@ -1,4 +1,4 @@
-export FABRIC_VERSION := 2.5.5
+export FABRIC_VERSION := 2.5.8
 export SYS_CHANNEL ?= system-channel
 export APP_CHANNEL ?= supplychain
 export CHAINCODE_NAME ?= shipping
@@ -18,7 +18,7 @@ generate:
 # Start the Fabric network
 network-up:
 	@echo "Starting Fabric network..."
-	@docker-compose up -d orderer.example.com \
+	@docker-compose up -d --build orderer.example.com \
 		peer0.manufacturer.example.com peer0.transporter.example.com \
 		peer0.warehouse.example.com peer0.retailer.example.com \
 		cli
@@ -37,40 +37,63 @@ channel-create:
 		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt" \
 		cli peer channel create -o orderer.example.com:7050 \
 		-c $(APP_CHANNEL) -f /opt/gopath/src/github.com/hyperledger/fabric/peer/configtx/channel.tx \
-		--outputBlock /opt/gopath/src/github.com/hyperledger/fabric/peer/$(APP_CHANNEL).block \
+		--outputBlock /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/$(APP_CHANNEL).block \
 		--tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
 
 # Join peers to the channel
 channel-join:
 	@echo "Joining peers to channel: $(APP_CHANNEL)"
-	@docker exec -e "CORE_PEER_LOCALMSPID=ManufacturerMSP" \
-		-e "CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051" \
-		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt" \
-		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp" \
-		-e "CORE_PEER_TLS_ENABLED=true" \
-		cli peer channel join -b /opt/gopath/src/github.com/hyperledger/fabric/peer/$(APP_CHANNEL).block
+	@echo "Attempting to join peer0.manufacturer.example.com..."
+	@for i in {1..5}; do \
+		docker exec -e "CORE_PEER_LOCALMSPID=ManufacturerMSP" \
+			-e "CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051" \
+			-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt" \
+			-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp" \
+			-e "CORE_PEER_TLS_ENABLED=true" \
+			cli peer channel join -b /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/$(APP_CHANNEL).block && break || { \
+			echo "Attempt $$i failed. Retrying in 2 seconds..."; \
+			sleep 2; \
+		}; \
+	done
 	
-	@docker exec -e "CORE_PEER_LOCALMSPID=TransporterMSP" \
-		-e "CORE_PEER_ADDRESS=peer0.transporter.example.com:8051" \
-		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/tls/ca.crt" \
-		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/transporter.example.com/users/Admin@transporter.example.com/msp" \
-		-e "CORE_PEER_TLS_ENABLED=true" \
-		cli peer channel join -b /opt/gopath/src/github.com/hyperledger/fabric/peer/$(APP_CHANNEL).block
+	@echo "Attempting to join peer0.transporter.example.com..."
+	@for i in {1..5}; do \
+		docker exec -e "CORE_PEER_LOCALMSPID=TransporterMSP" \
+			-e "CORE_PEER_ADDRESS=peer0.transporter.example.com:8051" \
+			-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/tls/ca.crt" \
+			-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/transporter.example.com/users/Admin@transporter.example.com/msp" \
+			-e "CORE_PEER_TLS_ENABLED=true" \
+			cli peer channel join -b /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/$(APP_CHANNEL).block && break || { \
+			echo "Attempt $$i failed. Retrying in 2 seconds..."; \
+			sleep 2; \
+		}; \
+	done
 	
-	@docker exec -e "CORE_PEER_LOCALMSPID=WarehouseMSP" \
-		-e "CORE_PEER_ADDRESS=peer0.warehouse.example.com:9051" \
-		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls/ca.crt" \
-		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/users/Admin@warehouse.example.com/msp" \
-		-e "CORE_PEER_TLS_ENABLED=true" \
-		cli peer channel join -b /opt/gopath/src/github.com/hyperledger/fabric/peer/$(APP_CHANNEL).block
+	@echo "Attempting to join peer0.warehouse.example.com..."
+	@for i in {1..5}; do \
+		docker exec -e "CORE_PEER_LOCALMSPID=WarehouseMSP" \
+			-e "CORE_PEER_ADDRESS=peer0.warehouse.example.com:9051" \
+			-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls/ca.crt" \
+			-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/users/Admin@warehouse.example.com/msp" \
+			-e "CORE_PEER_TLS_ENABLED=true" \
+			cli peer channel join -b /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/$(APP_CHANNEL).block && break || { \
+			echo "Attempt $$i failed. Retrying in 2 seconds..."; \
+			sleep 2; \
+		}; \
+	done
 	
-	@docker exec -e "CORE_PEER_LOCALMSPID=RetailerMSP" \
-		-e "CORE_PEER_ADDRESS=peer0.retailer.example.com:10051" \
-		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt" \
-		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp" \
-		-e "CORE_PEER_TLS_ENABLED=true" \
-		cli peer channel join -b /opt/gopath/src/github.com/hyperledger/fabric/peer/$(APP_CHANNEL).block
-	
+	@echo "Attempting to join peer0.retailer.example.com..."
+	@for i in {1..5}; do \
+		docker exec -e "CORE_PEER_LOCALMSPID=RetailerMSP" \
+			-e "CORE_PEER_ADDRESS=peer0.retailer.example.com:10051" \
+			-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt" \
+			-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp" \
+			-e "CORE_PEER_TLS_ENABLED=true" \
+			cli peer channel join -b /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/$(APP_CHANNEL).block && break || { \
+			echo "Attempt $$i failed. Retrying in 2 seconds..."; \
+			sleep 2; \
+		}; \
+	done
 	@echo "All peers have joined the channel"
 
 # Run chaincode unit tests
@@ -215,7 +238,15 @@ app-up:
 	@echo "Frontend application started"
 
 # Full setup
-all: generate network-up channel-create channel-join cc-deploy wallets listener-up app-up
+all: generate network-up 
+	@sleep 45
+	@$(MAKE) channel-create
+	@sleep 10
+	@$(MAKE) channel-join
+	@$(MAKE) cc-deploy
+	@$(MAKE) wallets
+	@$(MAKE) listener-up
+	@$(MAKE) app-up
 
 # ============ NEW TARGETS FOR PART 4 ============
 

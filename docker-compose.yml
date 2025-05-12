@@ -6,9 +6,10 @@ x-common: &common
     - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
     - FABRIC_LOGGING_SPEC=INFO
     - CORE_PEER_TLS_ENABLED=true
-    - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
-    - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
-    - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+    # Corrected paths to match where the volumes are mounted
+    - CORE_PEER_TLS_CERT_FILE=/var/hyperledger/fabric/config/tls/server.crt
+    - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/fabric/config/tls/server.key
+    - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/config/tls/ca.crt
     - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric_network
     - CORE_PEER_TLS_CLIENTAUTHREQUIRED=false
     - CORE_PEER_GOSSIP_SKIPHANDSHAKE=true
@@ -21,6 +22,7 @@ x-common: &common
   command: peer node start
   volumes:
     - /var/run/docker.sock:/host/var/run/docker.sock
+    # The crypto-config volume mount seems generally correct, keeping it as is for now
     - ./network/crypto-config:/etc/hyperledger/fabric/crypto-config
   networks:
     - fabric
@@ -66,6 +68,7 @@ services:
     container_name: peer0.manufacturer.example.com
     environment:
       - CORE_PEER_ID=peer0.manufacturer.example.com
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
       - CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051
       - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
       - CORE_PEER_CHAINCODEADDRESS=peer0.manufacturer.example.com:7052
@@ -73,13 +76,18 @@ services:
       - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.manufacturer.example.com:7051
       - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.manufacturer.example.com:7051
       - CORE_PEER_LOCALMSPID=ManufacturerMSP
+      - CORE_PEER_TLS_ENABLED=true
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1:5984
       - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_PEER_TLS_CERT_FILE=/var/hyperledger/fabric/config/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/fabric/config/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/config/tls/ca.crt
     volumes:
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/msp:/etc/hyperledger/fabric/msp
-      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls:/etc/hyperledger/fabric/tls
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls:/var/hyperledger/fabric/config/tls
+      - ./network/crypto-config:/etc/hyperledger/fabric/crypto-config
     ports:
       - "7051:7051"
     depends_on:
@@ -98,6 +106,7 @@ services:
     container_name: peer0.transporter.example.com
     environment:
       - CORE_PEER_ID=peer0.transporter.example.com
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
       - CORE_PEER_ADDRESS=peer0.transporter.example.com:8051
       - CORE_PEER_LISTENADDRESS=0.0.0.0:8051
       - CORE_PEER_CHAINCODEADDRESS=peer0.transporter.example.com:8052
@@ -105,13 +114,18 @@ services:
       - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.transporter.example.com:8051
       - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.transporter.example.com:8051
       - CORE_PEER_LOCALMSPID=TransporterMSP
+      - CORE_PEER_TLS_ENABLED=true
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb2:5984
       - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_PEER_TLS_CERT_FILE=/var/hyperledger/fabric/config/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/fabric/config/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/config/tls/ca.crt
     volumes:
       - ./network/crypto-config/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/msp:/etc/hyperledger/fabric/msp
-      - ./network/crypto-config/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/tls:/etc/hyperledger/fabric/tls
+      - ./network/crypto-config/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/tls:/var/hyperledger/fabric/config/tls
+      - ./network/crypto-config:/etc/hyperledger/fabric/crypto-config
     ports:
       - "8051:8051"
     depends_on:
@@ -130,6 +144,7 @@ services:
     container_name: peer0.warehouse.example.com
     environment:
       - CORE_PEER_ID=peer0.warehouse.example.com
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
       - CORE_PEER_ADDRESS=peer0.warehouse.example.com:9051
       - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
       - CORE_PEER_CHAINCODEADDRESS=peer0.warehouse.example.com:9052
@@ -137,13 +152,18 @@ services:
       - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.warehouse.example.com:9051
       - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.warehouse.example.com:9051
       - CORE_PEER_LOCALMSPID=WarehouseMSP
+      - CORE_PEER_TLS_ENABLED=true
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb3:5984
       - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_PEER_TLS_CERT_FILE=/var/hyperledger/fabric/config/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/fabric/config/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/config/tls/ca.crt
     volumes:
       - ./network/crypto-config/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/msp:/etc/hyperledger/fabric/msp
-      - ./network/crypto-config/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls:/etc/hyperledger/fabric/tls
+      - ./network/crypto-config/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls:/var/hyperledger/fabric/config/tls
+      - ./network/crypto-config:/etc/hyperledger/fabric/crypto-config
     ports:
       - "9051:9051"
     depends_on:
@@ -162,6 +182,7 @@ services:
     container_name: peer0.retailer.example.com
     environment:
       - CORE_PEER_ID=peer0.retailer.example.com
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
       - CORE_PEER_ADDRESS=peer0.retailer.example.com:10051
       - CORE_PEER_LISTENADDRESS=0.0.0.0:10051
       - CORE_PEER_CHAINCODEADDRESS=peer0.retailer.example.com:10052
@@ -169,13 +190,18 @@ services:
       - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.retailer.example.com:10051
       - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.retailer.example.com:10051
       - CORE_PEER_LOCALMSPID=RetailerMSP
+      - CORE_PEER_TLS_ENABLED=true
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb4:5984
       - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_PEER_TLS_CERT_FILE=/var/hyperledger/fabric/config/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/fabric/config/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/config/tls/ca.crt
     volumes:
       - ./network/crypto-config/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/msp:/etc/hyperledger/fabric/msp
-      - ./network/crypto-config/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls:/etc/hyperledger/fabric/tls
+      - ./network/crypto-config/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls:/var/hyperledger/fabric/config/tls
+      - ./network/crypto-config:/etc/hyperledger/fabric/crypto-config
     ports:
       - "10051:10051"
     depends_on:
@@ -202,9 +228,12 @@ services:
       - CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051
       - CORE_PEER_LOCALMSPID=ManufacturerMSP
       - CORE_PEER_TLS_ENABLED=true
+      # Update CLI TLS paths to match where the peer expects them (if CLI needs to interact with peer using TLS certs mounted there)
+      # Note: The CLI might not need these if it's using its own crypto material for signing transactions,
+      # but having them point to the correct location for TLS communication with peers is safer.
       - CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/server.crt
-      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/server.key
-      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt
+      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/keystore/priv_sk
+      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt # This path should be correct for the CLI to trust the peer
       - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp
       - ORDERER_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
@@ -235,7 +264,6 @@ services:
       - WS_PORT=3001
     volumes:
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/signcerts/:/crypto/admin-cert.pem:ro
-      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/keystore/:/crypto/admin-key.pem:ro
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt:/crypto/ca.pem:ro
     ports:
       - "3001:3001"
