@@ -1,0 +1,279 @@
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+###############################################################################
+#
+#    Peer section
+#
+###############################################################################
+peer:
+    # The peer id provides a name for this peer instance and is used when
+    # naming docker resources.
+    id: jdoe
+
+    # The networkId allows for logical separation of networks
+    networkId: dev
+
+    # The listenAddress configures the peer to listen on the specified network interface
+    # address for incoming requests. The client-facing listenAddress is the one used for
+    # client interaction, whereas the peer-facing listenAddress is the one used for consensus
+    # related operations. The general rule is to "listen" on all the available network interfaces.
+    listenAddress: 0.0.0.0:7051
+    chaincodeListenAddress: 0.0.0.0:7052
+
+    # The addressAutoDetect specifies whether the peer should automatically detect its
+    # own address. This is useful when the peer is deployed as a container.
+    addressAutoDetect: false
+
+    # The endpoint configures the advertised host:port for this peer. This endpoint
+    # is advertised to other peers and is also used for the peer's ID generation.
+    # The endpoint will be given preference over the listenAddress and
+    # chaincodeListenAddress if those addresses are not explicitly configured.
+    # This allows the peer to advertise an externally resolvable URL, even if the
+    # peer is not bound to an externally resolvable interface.
+    endpoint:
+    
+    # The keepalive settings for the server and client
+    keepalive:
+        # Min and max delay in seconds between client pings. Defaults to 0 = disabled
+        minInterval: 60
+        # Setting for client resp. server interfaces
+        client:
+            # Timeout in seconds (defaults to 20s)
+            timeout: 20
+        # Setting for peer-to-peer keepalive
+        deliveryClient:
+            # Timeout in seconds (defaults to 20s)
+            timeout: 20
+
+    # Gossip settings for the peer
+    gossip:
+        bootstrap: 127.0.0.1:7051
+
+        # Enables gossip to pull blocks from other peers
+        useLeaderElection: true
+        orgLeader: false
+
+        # Membership settings
+        endpoint:
+        maxBlockCountToStore: 100
+        maxPropagationBurstLatency: 10ms
+        maxPropagationBurstSize: 10
+        propagateIterations: 1
+        propagatePeerNum: 3 # number of peers involved in the pulling
+        pullInterval: 4s
+        pullPeerNum: 3 # number of peers involved in the pulling
+        requestStateInfoInterval: 4s
+        publishStateInfoInterval: 4s
+        stateInfoRetentionInterval: 10s
+        publishCertPeriod: 10s
+        skipBlockVerification: false
+        dialTimeout: 3s
+        connTimeout: 2s
+        recvBuffSize: 20
+        sendBuffSize: 200
+        digestWaitTime: 1s
+        requestWaitTime: 1s
+        responseWaitTime: 2s
+        aliveTimeInterval: 5s
+        aliveExpirationTimeout: 25s
+        reconnectInterval: 25s
+        externalEndpoint:
+        election:
+            startupGracePeriod: 15s
+            membershipSampleInterval: 1s
+            leaderAliveThreshold: 10s
+            leaderElectionDuration: 5s
+
+        pvtData:
+            pullRetryThreshold: 60s
+            transientstoreMaxBlockRetention: 1000
+            pushAckTimeout: 3s
+            btlPullMargin: 10
+            reconcileBatchSize: 10
+            reconcileSleepInterval: 1m
+            reconciliationEnabled: true
+            skipPullingInvalidTransactionsDuringCommit: false
+
+    # TLS settings
+    tls:
+        # Require server-side TLS
+        enabled:  false
+        # Require client certificates / mutual TLS.
+        # Note that clients that are not configured to use a certificate will
+        # fail to connect to the peer.
+        clientAuthRequired: false
+        
+        # X.509 certificate used for TLS server
+        cert:
+            file: tls/server.crt
+        # Private key used for TLS server (and client if clientAuthEnabled
+        # is set to true
+        key:
+            file: tls/server.key
+        # Trusted root certificate chain for tls.cert
+        rootcert:
+            file: tls/ca.crt
+
+        # The server name use to verify the hostname returned by TLS handshake
+        clientRootCAs:
+            files:
+              - tls/ca.crt
+        clientKey:
+            file:
+        clientCert:
+            file:
+
+    # Authentication contains configuration parameters related to authenticating
+    # client messages
+    authentication:
+        # the acceptable difference between the current server time and the
+        # client's time as specified in a client request message
+        timewindow: 15m
+
+    # Path on the file system where peer will store data (eg ledger). This
+    # location must be access control protected to prevent unintended
+    # modification that might corrupt the peer operations.
+    fileSystemPath: /var/hyperledger/production/ledger
+
+    # BCCSP (BlockChain Crypto Service Provider) section is used to select which
+    # crypto implementation library to use
+    BCCSP:
+        # Default specifies the preferred blockchain crypto service provider
+        # to use. If the preferred provider is not available, the software
+        # based provider ("SW") will be used.
+        # Valid providers are:
+        #  - SW: a software based crypto provider
+        #  - PKCS11: a CA hardware security module crypto provider.
+        Default: SW
+
+        # SW configures the software based blockchain crypto provider.
+        SW:
+            # TODO: The default Hash and Security level needs refactoring to be
+            # fully configurable. !!! The hash currently is not initialized here
+            # but rather in the global config.GetHashAlgorithm() function.
+            Hash: SHA2
+            Security: 256
+            # Location of Key Store
+            FileKeyStore:
+                # If KeyStore is defined, then it will be used
+                # Otherwise, we use the location specified
+                # in the peer configuration, which is by default: /var/hyperledger/production/ledger
+                KeyStore:
+
+    # Event service settings
+    events:
+        # The address that the event service will be enabled on the peer
+        address: 0.0.0.0:7053
+
+        # total number of events that could be buffered without blocking send
+        buffersize: 100
+
+        # timeout duration for producer to send an event.
+        # if < 0, if buffer full, unblocks immediately and not send
+        # if 0, if buffer full, will block and guarantee the event will be sent out
+        # if > 0, if buffer full, blocks till timeout
+        timeout: 10ms
+        # timewindow is the acceptable difference between the peer's current
+        # time and the client's time as specified in a registration event
+        # message
+        timewindow: 15m
+
+        # Keepalive settings for the event server.
+        keepalive:
+            # MinInterval is the minimum permitted time between client pings.
+            # If clients send pings more frequently, the peer server will
+            # disconnect them
+            minInterval: 60s
+
+    # Settings for the admin services
+    admin:
+        listenAddress: 0.0.0.0:7055
+
+    # Chaincode settings
+    chaincode:
+        # The id used by the chaincode package during the installation process
+        id:
+            path:
+            name:
+
+        # Generic builder environemnt, suitable for most chaincode types
+        builder: $(DOCKER_NS)/fabric-ccenv:$(TWO_DIGIT_VERSION)
+
+        # Enables/disables force pulling of the base docker images (listed below)
+        # during user chaincode instantiation.
+        # Useful when using moving image tags (such as :latest)
+        pull: false
+
+        golang:
+            # golang will never need more than baseos
+            runtime: $(DOCKER_NS)/fabric-baseos:$(TWO_DIGIT_VERSION)
+
+            # Dynamic builds include the run of "go build" during instantiate/upgrade.
+            # Recommended for development
+            # NOTE: dynamic builds will always be built with the first peer in the
+            # network's CORE_PEER_MSPCONFIGPATH in their environment, regardless of
+            # which peer they landed on
+            dynamicLink: false
+
+        java:
+            # This is a Java shim base image
+            runtime: $(DOCKER_NS)/fabric-javaenv:$(TWO_DIGIT_VERSION)
+
+        node:
+            # This is a NodeJS shim base image
+            runtime: $(DOCKER_NS)/fabric-nodeenv:$(TWO_DIGIT_VERSION)
+
+        externalBuilders:
+            - path: /opt/hyperledger/fabric/chaincode/builder
+              name: external-sample-builder
+              propagateEnvironment:
+                - CHAINCODE_ENDPOINT  # Specify env vars to propagate from peer to chaincode container
+            # - path: /opt/hyperledger/fabric/chaincode/another-builder
+            #   name: another-external-builder
+            #   propagateEnvironment:
+            #     - EXTERNAL_VAR
+
+        # The maximum amount of time the chaincode can spend processing a request
+        executetimeout: 30s
+
+        # Keep chaincode installed on the peer after instantiating.
+        # Most useful in a development environment, as it allows
+        # quick restarting of the chaincode without reinstalling.
+        keepalive: 0
+
+        # The property enables the system (peer) to create a new chaincode
+        # package and overwrite the old existing chaincode package that is found
+        # in the ${peer.fileSystemPath}/lifecycle/chaincodes/.
+        # In this case, the package bytes that are calculated by the client are
+        # discarded.
+        # It is normally desired to discard the existing chaincode package
+        # with a new updated one. However, one might want to keep the existing
+        # chaincode package and restore it.
+        overwritePackage: true
+
+        # The system is trying to serialize the chaincode execution to one transaction at a time for each
+        # chaincode. That is, for any chaincode, the system is making sure that only one transaction is processed
+        # at a given time and blocking the rest.
+        # If the property is set to true, the peer would process multiple transactions for different chaincodes
+        # at a time.
+        enableIndependentTxs: false
+
+        # Checksum is used to verify the equality of a chaincode binary from
+        # different peers. Only used at the inception of the chain.
+        # The default algorithm is SHA256. Options:
+        # NoOpChecksumHasher: always returns a checksum of an empty byte array
+        # SHA256: SHA2 with 256 bits
+        # SHA3_256: SHA3 with 256 bits
+        InstantiationChecksum: SHA256
+
+        # system chaincodes whitelist. To add system chaincode:
+        #   - create generic configtx.yaml
+        #   - replace system chaincode register function in core/scc/importsysccs.go.
+        system:
+            _lifecycle:        enable
+            cscc:              enable
+            lscc:              enable
+            qscc:              enable

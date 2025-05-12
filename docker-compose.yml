@@ -18,6 +18,8 @@ x-common: &common
     - CORE_PEER_PROFILE_ENABLED=true
     - CORE_CHAINCODE_EXECUTETIMEOUT=300s
     - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+    # Add FABRIC_CFG_PATH to specify where core.yaml is located
+    - FABRIC_CFG_PATH=/etc/hyperledger/fabric
   working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
   command: peer node start
   volumes:
@@ -25,6 +27,7 @@ x-common: &common
     # The crypto-config volume mount seems generally correct, keeping it as is for now
     - ./network/crypto-config:/etc/hyperledger/fabric/crypto-config
     - ./chaincode:/opt/gopath/src/github.com/hyperledger/fabric/chaincode
+    - ./network/config:/etc/hyperledger/fabric
   networks:
     - fabric
 
@@ -279,7 +282,7 @@ services:
     build: ./app
     container_name: webapp
     environment:
-      - NEXT_PUBLIC_WS_URL=ws://localhost:3001/ws
+      - NEXT_PUBLIC_WS_URL=ws://listener:3001/ws
       - MSP_ID=ManufacturerMSP
       - PEER_ENDPOINT=peer0.manufacturer.example.com:7051
       - CHANNEL_NAME=supplychain

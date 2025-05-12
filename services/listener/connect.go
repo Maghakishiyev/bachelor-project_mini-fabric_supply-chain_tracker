@@ -37,7 +37,12 @@ func newGateway(mspID, certPath, keyPath, peerEndpoint string, tlsCACert []byte)
 	}
 
 	// Create a signing object from the private key
-	sign, err := identity.NewPrivateKeySign(keyPem)
+	privateKey, err := identity.PrivateKeyFromPEM(keyPem)
+	if err != nil {
+		log.Fatalf("failed to parse private key: %v", err)
+	}
+	
+	sign, err := identity.NewPrivateKeySign(privateKey)
 	if err != nil {
 		log.Fatalf("failed to create private key sign: %v", err)
 	}
