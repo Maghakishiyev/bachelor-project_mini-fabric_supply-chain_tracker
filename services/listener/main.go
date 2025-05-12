@@ -36,7 +36,7 @@ func main() {
 	mspID := getEnvOr("MSP_ID", "ManufacturerMSP")
 	certPath := getEnvOr("CERT_PATH", "/crypto/admin-cert.pem")
 	keyPath := getEnvOr("KEY_PATH", "/crypto/admin-key.pem")
-	peerURL := getEnvOr("PEER_ENDPOINT", "grpcs://peer0.manufacturer.example.com:7051")
+	peerURL := getEnvOr("PEER_ENDPOINT", "peer0.manufacturer.example.com:7051")
 	tlsCAPath := getEnvOr("TLS_CA", "/crypto/ca.pem")
 	
 	log.Printf("Starting blockchain event listener with MSP ID: %s, connecting to: %s", mspID, peerURL)
@@ -108,7 +108,7 @@ func main() {
 	
 	// Register for block events
 	log.Println("Listening for block events...")
-	events, err := network.NewBlockEventsRequest().Submit(ctx)
+	events, err := network.BlockEvents(ctx)
 	if err != nil {
 		log.Fatalf("Failed to register for block events: %v", err)
 	}

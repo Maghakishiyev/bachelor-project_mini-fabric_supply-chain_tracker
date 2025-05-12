@@ -10,7 +10,7 @@ x-common: &common
     - CORE_PEER_TLS_CERT_FILE=/var/hyperledger/fabric/config/tls/server.crt
     - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/fabric/config/tls/server.key
     - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/config/tls/ca.crt
-    - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=fabric_network
+    - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=${COMPOSE_PROJECT_NAME:-bachelor-project_mini-fabric_supply-chain_tracker}_fabric_network
     - CORE_PEER_TLS_CLIENTAUTHREQUIRED=false
     - CORE_PEER_GOSSIP_SKIPHANDSHAKE=true
     - CORE_PEER_GOSSIP_USELEADERELECTION=true
@@ -24,6 +24,7 @@ x-common: &common
     - /var/run/docker.sock:/host/var/run/docker.sock
     # The crypto-config volume mount seems generally correct, keeping it as is for now
     - ./network/crypto-config:/etc/hyperledger/fabric/crypto-config
+    - ./chaincode:/opt/gopath/src/github.com/hyperledger/fabric/chaincode
   networks:
     - fabric
 
@@ -258,12 +259,13 @@ services:
     environment:
       - MSP_ID=ManufacturerMSP
       - PEER_ENDPOINT=peer0.manufacturer.example.com:7051
-      - CERT_PATH=/crypto/admin-cert.pem
-      - KEY_PATH=/crypto/admin-key.pem
+      - CERT_PATH=/crypto/signcerts/Admin@manufacturer.example.com-cert.pem
+      - KEY_PATH=/crypto/keystore/priv_sk
       - TLS_CA=/crypto/ca.pem
       - WS_PORT=3001
     volumes:
-      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/signcerts/:/crypto/admin-cert.pem:ro
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/signcerts:/crypto/signcerts:ro
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/keystore:/crypto/keystore:ro
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt:/crypto/ca.pem:ro
     ports:
       - "3001:3001"
@@ -284,8 +286,8 @@ services:
       - CHAINCODE_NAME=shipping
       - CRYPTO_PATH=/crypto
     volumes:
-      - ./network/crypto-config/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp/signcerts/:/crypto/admin-cert.pem:ro
-      - ./network/crypto-config/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp/keystore/:/crypto/admin-key.pem:ro
+      - ./network/crypto-config/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp/signcerts/Admin@retailer.example.com-cert.pem:/crypto/admin-cert.pem:ro
+      - ./network/crypto-config/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp/keystore/priv_sk:/crypto/admin-key.pem:ro
       - ./network/crypto-config/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt:/crypto/ca.pem:ro
     ports:
       - "3000:3000"

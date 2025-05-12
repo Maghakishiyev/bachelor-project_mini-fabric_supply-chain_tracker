@@ -14,7 +14,7 @@ x-base-peer: &base-peer-def
     - CORE_METRICS_PROVIDER=prometheus
     - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9443
   volumes:
-    - /var/run/docker.sock:/host/var/run/docker.sock
+    - /var/run/docker.sock:/var/run/docker.sock
   command: peer node start
   networks:
     - supply-net

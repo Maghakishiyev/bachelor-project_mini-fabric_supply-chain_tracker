@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -123,14 +124,31 @@ func (s *SmartContract) shipmentExists(ctx contractapi.TransactionContextInterfa
 
 /*  ───────  main  ───────  */
 func main() {
-	cc, err := contractapi.NewChaincode(&SmartContract{})
-	if err != nil {
-		panic(err)
-	}
-	cc.Info.Version = "1.0"
-	cc.Info.Title = "ShippingContract"
-	cc.Info.Description = "Proof-of-concept supply-chain chain-code"
-	if err := cc.Start(); err != nil {
-		panic(err)
+	// Check if we should run as a server (CCAAS mode)
+	if os.Getenv("CHAINCODE_SERVER_ADDRESS") != "" {
+		// Run as a chaincode service
+		server, err := NewChaincodeServer()
+		if err != nil {
+			fmt.Printf("Error creating chaincode server: %s", err)
+			os.Exit(1)
+		}
+		
+		fmt.Println("Starting chaincode server...")
+		if err := server.Start(); err != nil {
+			fmt.Printf("Error starting chaincode server: %s", err)
+			os.Exit(1)
+		}
+	} else {
+		// Run as a normal chaincode
+		cc, err := contractapi.NewChaincode(&SmartContract{})
+		if err != nil {
+			panic(err)
+		}
+		cc.Info.Version = "1.0"
+		cc.Info.Title = "ShippingContract"
+		cc.Info.Description = "Proof-of-concept supply-chain chain-code"
+		if err := cc.Start(); err != nil {
+			panic(err)
+		}
 	}
 }

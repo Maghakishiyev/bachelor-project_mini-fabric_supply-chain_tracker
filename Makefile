@@ -111,27 +111,40 @@ cc-vendor:
 cc-package:
 	@echo "Vendoring + packaging chaincode: $(CHAINCODE_NAME)"
 	@$(MAKE) cc-vendor
+	@echo "Using external build for chaincode"
+	@cd chaincode/shipping && tar -czf shipping.tar.gz --exclude=vendor --exclude=.git .
+	@echo "Created external chaincode package at chaincode/shipping/shipping.tar.gz" 
+	@docker cp chaincode/shipping/shipping.tar.gz cli:/opt/gopath/src/github.com/hyperledger/fabric/peer/$(CHAINCODE_NAME).tar.gz
 	@docker exec cli peer lifecycle chaincode package /opt/gopath/src/github.com/hyperledger/fabric/peer/$(CHAINCODE_NAME).tar.gz \
 		--path /opt/gopath/src/github.com/hyperledger/fabric/peer/chaincode/$(CHAINCODE_NAME) \
 		--lang golang --label $(CHAINCODE_NAME)_1.0
 
-# Install chaincode on all peers
+# Install chaincode on all peers with external builder
 cc-install:
 	@echo "Installing chaincode on all peers..."
+	@echo "Using external chaincode installation approach"
 	@docker exec -e "CORE_PEER_LOCALMSPID=ManufacturerMSP" \
 		-e "CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051" \
+		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp" \
 		cli peer lifecycle chaincode install /opt/gopath/src/github.com/hyperledger/fabric/peer/$(CHAINCODE_NAME).tar.gz
 	
 	@docker exec -e "CORE_PEER_LOCALMSPID=TransporterMSP" \
 		-e "CORE_PEER_ADDRESS=peer0.transporter.example.com:8051" \
+		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/transporter.example.com/users/Admin@transporter.example.com/msp" \
 		cli peer lifecycle chaincode install /opt/gopath/src/github.com/hyperledger/fabric/peer/$(CHAINCODE_NAME).tar.gz
 	
 	@docker exec -e "CORE_PEER_LOCALMSPID=WarehouseMSP" \
 		-e "CORE_PEER_ADDRESS=peer0.warehouse.example.com:9051" \
+		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/users/Admin@warehouse.example.com/msp" \
 		cli peer lifecycle chaincode install /opt/gopath/src/github.com/hyperledger/fabric/peer/$(CHAINCODE_NAME).tar.gz
 	
 	@docker exec -e "CORE_PEER_LOCALMSPID=RetailerMSP" \
 		-e "CORE_PEER_ADDRESS=peer0.retailer.example.com:10051" \
+		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp" \
 		cli peer lifecycle chaincode install /opt/gopath/src/github.com/hyperledger/fabric/peer/$(CHAINCODE_NAME).tar.gz
 
 # Approve chaincode by all organizations
@@ -183,8 +196,124 @@ cc-commit:
 		--peerAddresses peer0.retailer.example.com:10051 \
 		--tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt
 
+# Simple external chaincode deployment target
+# Skipping the build/install process by using a pure external CCaaS approach
+cc-deploy:
+	@echo "Using pure CCaaS approach (external chaincode service)..."
+	@mkdir -p /tmp/shipping_ccaas
+	
+	@echo "1. Creating CCaaS metadata.json and connection.json..."
+	@echo '{"type":"ccaas","label":"shipping_1.0"}' > /tmp/shipping_ccaas/metadata.json
+	@echo '{"address":"localhost:9999","dial_timeout":"10s","tls_required":false}' > /tmp/shipping_ccaas/connection.json
+	@cd /tmp/shipping_ccaas && tar czf code.tar.gz connection.json
+	@cd /tmp/shipping_ccaas && tar czf shipping_1.0.tar.gz metadata.json code.tar.gz
+	@docker cp /tmp/shipping_ccaas/shipping_1.0.tar.gz cli:/opt/gopath/src/github.com/hyperledger/fabric/peer/shipping_1.0.tar.gz
+	
+	@echo "2. Installing CCaaS package on all peers..."
+	@docker exec -e "CORE_PEER_LOCALMSPID=ManufacturerMSP" \
+		-e "CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051" \
+		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp" \
+		-e "CORE_PEER_TLS_ENABLED=true" \
+		cli peer lifecycle chaincode install /opt/gopath/src/github.com/hyperledger/fabric/peer/shipping_1.0.tar.gz
+	
+	@docker exec -e "CORE_PEER_LOCALMSPID=TransporterMSP" \
+		-e "CORE_PEER_ADDRESS=peer0.transporter.example.com:8051" \
+		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/transporter.example.com/users/Admin@transporter.example.com/msp" \
+		-e "CORE_PEER_TLS_ENABLED=true" \
+		cli peer lifecycle chaincode install /opt/gopath/src/github.com/hyperledger/fabric/peer/shipping_1.0.tar.gz
+	
+	@docker exec -e "CORE_PEER_LOCALMSPID=WarehouseMSP" \
+		-e "CORE_PEER_ADDRESS=peer0.warehouse.example.com:9051" \
+		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/users/Admin@warehouse.example.com/msp" \
+		-e "CORE_PEER_TLS_ENABLED=true" \
+		cli peer lifecycle chaincode install /opt/gopath/src/github.com/hyperledger/fabric/peer/shipping_1.0.tar.gz
+	
+	@docker exec -e "CORE_PEER_LOCALMSPID=RetailerMSP" \
+		-e "CORE_PEER_ADDRESS=peer0.retailer.example.com:10051" \
+		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp" \
+		-e "CORE_PEER_TLS_ENABLED=true" \
+		cli peer lifecycle chaincode install /opt/gopath/src/github.com/hyperledger/fabric/peer/shipping_1.0.tar.gz
+	
+	@echo "3. Getting packageID from queryinstalled..."
+	@docker exec cli peer lifecycle chaincode queryinstalled > /tmp/shipping_ccaas/queryinstalled.txt
+	@PKG_ID=$$(cat /tmp/shipping_ccaas/queryinstalled.txt | grep -o "shipping_1.0:[^,]*" | head -1); \
+	echo "Package ID: $$PKG_ID"; \
+	docker exec -e "CORE_PEER_LOCALMSPID=ManufacturerMSP" \
+		-e "CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051" \
+		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp" \
+		-e "CORE_PEER_TLS_ENABLED=true" \
+		cli peer lifecycle chaincode approveformyorg -o orderer.example.com:7050 \
+		--channelID $(APP_CHANNEL) --name $(CHAINCODE_NAME) --version 1.0 --package-id $$PKG_ID \
+		--sequence 1 --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+	
+	@echo "4. Approving for all other organizations..."
+	@PKG_ID=$$(cat /tmp/shipping_ccaas/queryinstalled.txt | grep -o "shipping_1.0:[^,]*" | head -1); \
+	docker exec -e "CORE_PEER_LOCALMSPID=TransporterMSP" \
+		-e "CORE_PEER_ADDRESS=peer0.transporter.example.com:8051" \
+		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/transporter.example.com/users/Admin@transporter.example.com/msp" \
+		-e "CORE_PEER_TLS_ENABLED=true" \
+		cli peer lifecycle chaincode approveformyorg -o orderer.example.com:7050 \
+		--channelID $(APP_CHANNEL) --name $(CHAINCODE_NAME) --version 1.0 --package-id $$PKG_ID \
+		--sequence 1 --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+	
+	@PKG_ID=$$(cat /tmp/shipping_ccaas/queryinstalled.txt | grep -o "shipping_1.0:[^,]*" | head -1); \
+	docker exec -e "CORE_PEER_LOCALMSPID=WarehouseMSP" \
+		-e "CORE_PEER_ADDRESS=peer0.warehouse.example.com:9051" \
+		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/users/Admin@warehouse.example.com/msp" \
+		-e "CORE_PEER_TLS_ENABLED=true" \
+		cli peer lifecycle chaincode approveformyorg -o orderer.example.com:7050 \
+		--channelID $(APP_CHANNEL) --name $(CHAINCODE_NAME) --version 1.0 --package-id $$PKG_ID \
+		--sequence 1 --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+	
+	@PKG_ID=$$(cat /tmp/shipping_ccaas/queryinstalled.txt | grep -o "shipping_1.0:[^,]*" | head -1); \
+	docker exec -e "CORE_PEER_LOCALMSPID=RetailerMSP" \
+		-e "CORE_PEER_ADDRESS=peer0.retailer.example.com:10051" \
+		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp" \
+		-e "CORE_PEER_TLS_ENABLED=true" \
+		cli peer lifecycle chaincode approveformyorg -o orderer.example.com:7050 \
+		--channelID $(APP_CHANNEL) --name $(CHAINCODE_NAME) --version 1.0 --package-id $$PKG_ID \
+		--sequence 1 --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+	
+	@echo "5. Committing chaincode definition..."
+	@docker exec -e "CORE_PEER_LOCALMSPID=ManufacturerMSP" \
+		-e "CORE_PEER_ADDRESS=peer0.manufacturer.example.com:7051" \
+		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt" \
+		-e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp" \
+		-e "CORE_PEER_TLS_ENABLED=true" \
+		cli peer lifecycle chaincode commit -o orderer.example.com:7050 \
+		--channelID $(APP_CHANNEL) --name $(CHAINCODE_NAME) --version 1.0 \
+		--sequence 1 \
+		--tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem \
+		--peerAddresses peer0.manufacturer.example.com:7051 \
+		--tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt \
+		--peerAddresses peer0.transporter.example.com:8051 \
+		--tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/tls/ca.crt \
+		--peerAddresses peer0.warehouse.example.com:9051 \
+		--tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls/ca.crt \
+		--peerAddresses peer0.retailer.example.com:10051 \
+		--tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt
+	
+	@echo "6. Start chaincode server..."
+	@docker run -d --name shipping-ccaas \
+		-v $(PWD)/chaincode/shipping:/app \
+		-e CHAINCODE_SERVER_ADDRESS=0.0.0.0:9999 \
+		-e CHAINCODE_ID=$$(cat /tmp/shipping_ccaas/queryinstalled.txt | grep -o "shipping_1.0:[^,]*" | head -1) \
+		-p 9999:9999 \
+		--network fabric_network \
+		golang:1.24 /bin/bash -c "cd /app && go mod vendor && go build -o /app/chaincode && /app/chaincode"
+	
+	@echo "✅ External chaincode service started. Deployment complete!"
+
 # Chaincode deployment (package, install, approve, commit)
-cc-deploy: cc-package cc-install cc-approve cc-commit
+cc-deploy-external: cc-deploy
 
 # Create test shipment
 cc-test-invoke:
@@ -245,11 +374,11 @@ app-up:
 
 # Full setup
 all: generate network-up 
-	@sleep 45
+	@sleep 10
 	@$(MAKE) channel-create
 	@sleep 10
 	@$(MAKE) channel-join
-	@$(MAKE) cc-deploy
+	@$(MAKE) cc-deploy-external
 	@$(MAKE) wallets
 	@$(MAKE) listener-up
 	@$(MAKE) app-up
