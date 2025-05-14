@@ -18,14 +18,31 @@ type SmartContract struct {
 func (s *SmartContract) CreateShipment(ctx contractapi.TransactionContextInterface,
 	id, origin, destination string) error {
 
-	callerMSP, _ := ctx.GetClientIdentity().GetMSPID()
+	callerMSP, err := ctx.GetClientIdentity().GetMSPID()
+	fmt.Printf("CreateShipment called with id=%s, origin=%s, destination=%s from MSP: %s\n", 
+		id, origin, destination, callerMSP)
+	
+	if err != nil {
+		fmt.Printf("Error getting MSP ID: %v\n", err)
+		return fmt.Errorf("error getting caller MSP ID: %v", err)
+	}
+	
 	if callerMSP != "ManufacturerMSP" { // only manufacturer starts the flow
+		fmt.Printf("Access denied: caller MSP %s not permitted, only ManufacturerMSP allowed\n", callerMSP)
 		return fmt.Errorf("caller MSP %s not permitted", callerMSP)
 	}
-	exists, _ := s.shipmentExists(ctx, id)
+	
+	exists, err := s.shipmentExists(ctx, id)
+	if err != nil {
+		fmt.Printf("Error checking if shipment exists: %v\n", err)
+		return fmt.Errorf("error checking if shipment exists: %v", err)
+	}
+	
 	if exists {
+		fmt.Printf("Shipment %s already exists\n", id)
 		return fmt.Errorf("shipment %s already exists", id)
 	}
+	
 	ship := Shipment{
 		ID:          id,
 		OwnerMSP:    callerMSP,
@@ -33,9 +50,23 @@ func (s *SmartContract) CreateShipment(ctx contractapi.TransactionContextInterfa
 		Destination: destination,
 		Status:      StatusCreated,
 		LastUpdate:  time.Now(),
+		DocsHash:    "", // Empty string but not omitted
 	}
-	bytes, _ := json.Marshal(ship)
-	return ctx.GetStub().PutState(id, bytes)
+	
+	bytes, err := json.Marshal(ship)
+	if err != nil {
+		fmt.Printf("Error marshaling shipment: %v\n", err)
+		return fmt.Errorf("error marshaling shipment: %v", err)
+	}
+	
+	err = ctx.GetStub().PutState(id, bytes)
+	if err != nil {
+		fmt.Printf("Error putting state: %v\n", err)
+		return fmt.Errorf("error saving shipment: %v", err)
+	}
+	
+	fmt.Printf("Successfully created shipment: %s\n", id)
+	return nil
 }
 
 /*  ───────  update status  ───────  */
@@ -81,19 +112,49 @@ func (s *SmartContract) TransferOwnership(ctx contractapi.TransactionContextInte
 func (s *SmartContract) QueryShipment(ctx contractapi.TransactionContextInterface,
 	id string) (*Shipment, error) {
 
+	fmt.Printf("QueryShipment called for id=%s\n", id)
+	
+	callerMSP, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		fmt.Printf("Error getting MSP ID: %v\n", err)
+	} else {
+		fmt.Printf("QueryShipment called by org: %s\n", callerMSP)
+	}
+
 	bytes, err := ctx.GetStub().GetState(id)
-	if err != nil || bytes == nil {
+	if err != nil {
+		fmt.Printf("Error getting state for shipment %s: %v\n", id, err)
+		return nil, fmt.Errorf("error getting shipment %s: %v", id, err)
+	}
+	
+	if bytes == nil {
+		fmt.Printf("Shipment %s not found (no data)\n", id)
 		return nil, fmt.Errorf("shipment %s not found", id)
 	}
+	
 	var ship Shipment
-	_ = json.Unmarshal(bytes, &ship)
+	err = json.Unmarshal(bytes, &ship)
+	if err != nil {
+		fmt.Printf("Error unmarshaling shipment %s: %v\n", id, err)
+		return nil, fmt.Errorf("error unmarshaling shipment %s: %v", id, err)
+	}
+	
+	fmt.Printf("Successfully queried shipment: %s\n", id)
 	return &ship, nil
 }
 
 func (s *SmartContract) GetAllShipments(ctx contractapi.TransactionContextInterface) ([]*Shipment, error) {
+	callerMSP, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		fmt.Printf("Error getting MSP ID in GetAllShipments: %v\n", err)
+	} else {
+		fmt.Printf("GetAllShipments called by org: %s\n", callerMSP)
+	}
+
 	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
 	if err != nil {
-		return nil, err
+		fmt.Printf("Error getting state by range: %v\n", err)
+		return nil, fmt.Errorf("error querying all shipments: %v", err)
 	}
 	defer resultsIterator.Close()
 
@@ -101,17 +162,20 @@ func (s *SmartContract) GetAllShipments(ctx contractapi.TransactionContextInterf
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
 		if err != nil {
-			return nil, err
+			fmt.Printf("Error getting next result: %v\n", err)
+			return nil, fmt.Errorf("error iterating through shipments: %v", err)
 		}
 
 		var ship Shipment
 		err = json.Unmarshal(queryResponse.Value, &ship)
 		if err != nil {
-			return nil, err
+			fmt.Printf("Error unmarshaling shipment: %v\n", err)
+			return nil, fmt.Errorf("error parsing shipment data: %v", err)
 		}
 		shipments = append(shipments, &ship)
 	}
 
+	fmt.Printf("GetAllShipments returning %d shipments\n", len(shipments))
 	return shipments, nil
 }
 

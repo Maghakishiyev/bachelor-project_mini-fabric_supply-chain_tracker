@@ -195,7 +195,8 @@ cc-commit:
 		--peerAddresses peer0.warehouse.example.com:9051 \
 		--tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls/ca.crt \
 		--peerAddresses peer0.retailer.example.com:10051 \
-		--tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt
+		--tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt \
+		--signature-policy "OR('ManufacturerMSP.member', 'TransporterMSP.member', 'WarehouseMSP.member', 'RetailerMSP.member')"
 
 # Simple external chaincode deployment target
 # Skipping the build/install process by using a pure external CCaaS approach
@@ -306,15 +307,12 @@ cc-deploy:
 	@docker run -d --name shipping-ccaas \
 		-v $(PWD)/chaincode/shipping:/app \
 		-e CHAINCODE_SERVER_ADDRESS=0.0.0.0:9999 \
-		-e CHAINCODE_ID=$$(cat /tmp/shipping_ccaas/queryinstalled.txt | grep -o "shipping_1.0:[^,]*" | head -1) \
+		-e CORE_CHAINCODE_ID_NAME=$$(cat /tmp/shipping_ccaas/queryinstalled.txt | grep -o "shipping_1.0:[^,]*" | head -1) \
 		-p 9999:9999 \
 		--network fabric_network \
 		golang:1.24 /bin/bash -c "cd /app && go mod vendor && go build -o /app/chaincode && /app/chaincode"
 	
 	@echo "✅ External chaincode service started. Deployment complete!"
-
-# Chaincode deployment (package, install, approve, commit)
-cc-deploy-external: cc-deploy
 
 # Create test shipment
 cc-test-invoke:
@@ -380,7 +378,7 @@ all: generate network-up
 	@$(MAKE) channel-create
 	@sleep 10
 	@$(MAKE) channel-join
-	@$(MAKE) cc-deploy-external
+	@$(MAKE) cc-deploy
 	@$(MAKE) wallets
 	@$(MAKE) listener-up
 	@$(MAKE) app-up

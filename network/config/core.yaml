@@ -132,6 +132,31 @@ peer:
         # the acceptable difference between the current server time and the
         # client's time as specified in a client request message
         timewindow: 15m
+        
+    # ACL configuration controls what resources are accessible to identities
+    acl:
+        # Default policy is Readers for most resources to be as permissive as possible
+        # Use ImplicitMeta ANY Readers policy to allow read access to all resources
+        # Important! This is very permissive for development only
+        _default: /Channel/Application/Readers
+        lscc/ChaincodeExists: /Channel/Application/Readers
+        lscc/GetDeploymentSpec: /Channel/Application/Readers
+        lscc/GetChaincodeData: /Channel/Application/Readers
+        lscc/GetInstantiatedChaincodes: /Channel/Application/Readers
+        qscc/GetChainInfo: /Channel/Application/Readers
+        qscc/GetBlockByNumber: /Channel/Application/Readers
+        qscc/GetBlockByHash: /Channel/Application/Readers
+        qscc/GetTransactionByID: /Channel/Application/Readers
+        qscc/GetBlockByTxID: /Channel/Application/Readers
+        cscc/GetConfigBlock: /Channel/Application/Readers
+        cscc/GetConfigTree: /Channel/Application/Readers
+        cscc/SimulateConfigTreeUpdate: /Channel/Application/Readers
+        peer/Propose: /Channel/Application/Writers
+        peer/ChaincodeToChaincode: /Channel/Application/Readers
+        event/Block: /Channel/Application/Readers
+        event/FilteredBlock: /Channel/Application/Readers
+        # ACLs for chaincode
+        chaincode/GetMetadata: /Channel/Application/Readers
 
     # Path on the file system where peer will store data (eg ledger). This
     # location must be access control protected to prevent unintended

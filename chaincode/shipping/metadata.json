@@ -1,4 +1,6 @@
 {
+  "type": "ccaas",
+  "label": "shipping_1.0",
   "version": "1.0",
   "components": {
     "contracts": [
@@ -6,7 +8,7 @@
     ]
   },
   "endorsement-policy": {
-    "type": "Signature",
-    "rule": "OR('ManufacturerMSP.peer','TransporterMSP.peer','WarehouseMSP.peer','RetailerMSP.peer')"
+    "type": "ImplicitMeta",
+    "rule": "ANY Endorsement"
   }
 }

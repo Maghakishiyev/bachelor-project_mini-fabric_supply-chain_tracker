@@ -18,5 +18,5 @@ type Shipment struct {
 	Destination string    `json:"destination"`
 	Status      string    `json:"status"`
 	LastUpdate  time.Time `json:"last_update"`
-	DocsHash    string    `json:"docs_hash,omitempty"` // optional IPFS/S3 hash
+	DocsHash    string    `json:"docs_hash"` // Required by schema validation
 }

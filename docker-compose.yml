@@ -266,6 +266,7 @@ services:
       - KEY_PATH=/crypto/keystore/priv_sk
       - TLS_CA=/crypto/ca.pem
       - WS_PORT=3001
+      - FABRIC_LOGGING_SPEC=DEBUG
     volumes:
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/signcerts:/crypto/signcerts:ro
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/keystore:/crypto/keystore:ro
@@ -288,17 +289,51 @@ services:
       - CHANNEL_NAME=supplychain
       - CHAINCODE_NAME=shipping
       - CRYPTO_PATH=/crypto
+      - NODE_ENV=development
+      - DEBUG=fabric*,grpc*
+      - CHAINCODE_ID=shipping
+      - FABRIC_LOGGING_SPEC=DEBUG
+      - CORE_PEER_ID=webapp
+      - CORE_PEER_MSPCONFIGPATH=/crypto
+      - CORE_PEER_LOCALMSPID=ManufacturerMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_ROOTCERT_FILE=/crypto/ca.pem
     volumes:
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/signcerts/Admin@manufacturer.example.com-cert.pem:/crypto/signcerts/Admin@manufacturer.example.com-cert.pem:ro
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/signcerts/Admin@manufacturer.example.com-cert.pem:/crypto/admin-cert.pem:ro
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/keystore/priv_sk:/crypto/keystore/priv_sk:ro
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/keystore/priv_sk:/crypto/admin-key.pem:ro
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt:/crypto/ca.pem:ro
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/cacerts:/crypto/cacerts:ro
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/signcerts:/crypto/signcerts:ro
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/admincerts:/crypto/admincerts:ro
     ports:
       - "3000:3000"
     depends_on:
       - listener
-      - peer0.retailer.example.com
+      - peer0.manufacturer.example.com
     networks:
       - fabric
+
+  # Chaincode as a Service (CCaaS) container
+  shipping-ccaas:
+    container_name: shipping-ccaas
+    image: golang:1.24
+    working_dir: /app
+    command: bash -c "cd /app && go mod vendor && go build -o chaincode && CORE_CHAINCODE_ID_NAME=shipping:1.0 CORE_PEER_TLS_ENABLED=false ./chaincode"
+    ports:
+      - "9999:9999"
+    volumes:
+      - ./chaincode/shipping:/app
+    networks:
+      - fabric
+    environment:
+      - CORE_CHAINCODE_ID_NAME=shipping:1.0
+      - CORE_PEER_TLS_ENABLED=false
+      - CHAINCODE_SERVER_ADDRESS=0.0.0.0:9999
+      - CHAINCODE_AS_A_SERVICE=true
+    depends_on:
+      - peer0.manufacturer.example.com
 
 networks:
   fabric:
