@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -25,122 +24,97 @@ var (
 )
 
 func getEnvOr(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
+	if v, ok := os.LookupEnv(key); ok {
+		return v
 	}
 	return fallback
 }
 
 func main() {
-	// Get environment variables
+	// 1) Bootstrap Gateway
 	mspID := getEnvOr("MSP_ID", "ManufacturerMSP")
-	certPath := getEnvOr("CERT_PATH", "/crypto/admin-cert.pem")
-	keyPath := getEnvOr("KEY_PATH", "/crypto/admin-key.pem")
+	certPath := getEnvOr("CERT_PATH", "/crypto/signcerts/Admin@manufacturer.example.com-cert.pem")
+	keyPath := getEnvOr("KEY_PATH", "/crypto/keystore/priv_sk")
 	peerURL := getEnvOr("PEER_ENDPOINT", "peer0.manufacturer.example.com:7051")
 	tlsCAPath := getEnvOr("TLS_CA", "/crypto/ca.pem")
-	
-	log.Printf("Starting blockchain event listener with MSP ID: %s, connecting to: %s", mspID, peerURL)
-	
-	// Read TLS CA certificate
+
+	log.Printf("Listener starting (MSP=%s, peer=%s)", mspID, peerURL)
 	caPEM, err := os.ReadFile(tlsCAPath)
 	if err != nil {
-		log.Fatalf("Failed to read TLS CA certificate: %v", err)
+		log.Fatalf("read TLS CA: %v", err)
 	}
-
-	// Create gateway connection
 	gw := newGateway(mspID, certPath, keyPath, peerURL, caPEM)
 	defer gw.Close()
-	
-	// Get network
 	network := gw.GetNetwork(channelName)
-	
-	// Create WebSocket hub
+
+	// 2) WebSocket endpoint
 	hub := NewHub()
-	
-	// Setup WebSocket handler
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			log.Printf("WebSocket upgrade failed: %v", err)
+			log.Printf("ws upgrade: %v", err)
 			return
 		}
-		
-		log.Println("Client connected to WebSocket")
 		hub.Add(conn)
-		
-		// Handle disconnection
+		log.Println("WS client connected")
 		defer func() {
 			hub.Remove(conn)
 			conn.Close()
-			log.Println("Client disconnected from WebSocket")
+			log.Println("WS client disconnected")
 		}()
-		
-		// Keep the connection alive
 		for {
-			_, _, err := conn.ReadMessage()
-			if err != nil {
-				break
+			if _, _, err := conn.ReadMessage(); err != nil {
+				return
 			}
 		}
 	})
-	
-	// Start HTTP server for WebSocket
 	go func() {
-		addr := "0.0.0.0:" + wsPort
-		log.Printf("WebSocket server listening on %s", addr)
-		if err := http.ListenAndServe(addr, nil); err != nil {
-			log.Fatalf("Failed to start WebSocket server: %v", err)
-		}
+		addr := ":" + wsPort
+		log.Printf("WS listening on %s", addr)
+		log.Fatal(http.ListenAndServe(addr, nil))
 	}()
-	
-	// Setup graceful shutdown
+
+	// 3) Graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	
-	// Handle OS signals
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		<-sigCh
-		log.Println("Received shutdown signal")
+		<-sigs
+		log.Println("shutting down")
 		cancel()
 	}()
-	
-	// Register for block events
-	log.Println("Listening for block events...")
-	events, err := network.BlockEvents(ctx)
+
+	// 4) Subscribe to chaincode events, not block events
+	events, err := network.ChaincodeEvents(ctx, ccName)
 	if err != nil {
-		log.Fatalf("Failed to register for block events: %v", err)
+		log.Fatalf("failed to register for chaincode events: %v", err)
 	}
-	
-	// Process block events
+	log.Println("listening for chaincode events…")
+
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Shutting down")
 			return
-		case event, ok := <-events:
+		case ccEvent, ok := <-events:
 			if !ok {
-				log.Println("Event channel closed")
 				return
 			}
-			
-			// Convert block event to JSON
-			blockData, err := json.Marshal(event)
-			if err != nil {
-				log.Printf("Failed to marshal block: %v", err)
-				continue
+			// ccEvent.Payload is exactly what your chaincode emitted via SetEvent()
+			// Forward it straight to all WS clients.
+			envelope := struct {
+				TxID    string          `json:"txId"`
+				Name    string          `json:"eventName"`
+				Payload json.RawMessage `json:"payload"`
+				Block   uint64          `json:"blockNumber"`
+			}{
+				TxID:    ccEvent.TransactionID,
+				Name:    ccEvent.EventName,
+				Payload: ccEvent.Payload,
+				Block:   ccEvent.BlockNumber,
 			}
-			
-			// Log block number
-			blockNum := event.GetHeader().GetNumber()
-			log.Printf("Received block #%d - broadcasting to %d clients", blockNum, len(hub.clients))
-			
-			// Broadcast to all WebSocket clients
-			hub.Broadcast(blockData)
-			
-			// Small delay to prevent CPU hogging
-			time.Sleep(10 * time.Millisecond)
+			b, _ := json.Marshal(envelope)
+			hub.Broadcast(b)
 		}
 	}
 }

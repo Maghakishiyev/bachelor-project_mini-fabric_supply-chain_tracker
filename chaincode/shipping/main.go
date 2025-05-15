@@ -61,6 +61,7 @@ func (s *SmartContract) CreateShipment(ctx contractapi.TransactionContextInterfa
 	}
 
 	err = ctx.GetStub().PutState(id, bytes)
+	ctx.GetStub().SetEvent("ShipmentCreated", bytes)
 	if err != nil {
 		log.Printf("Error putting state: %v", err)
 		return fmt.Errorf("error saving shipment: %v", err)
@@ -85,6 +86,7 @@ func (s *SmartContract) UpdateStatus(ctx contractapi.TransactionContextInterface
 	ship.LastUpdate = time.Now()
 	ship.OwnerMSP, _ = ctx.GetClientIdentity().GetMSPID() // transfer of custody
 	bytes, _ := json.Marshal(ship)
+	ctx.GetStub().SetEvent("ShipmentUpdated", bytes)
 	return ctx.GetStub().PutState(id, bytes)
 }
 
@@ -106,6 +108,11 @@ func (s *SmartContract) TransferOwnership(ctx contractapi.TransactionContextInte
 	ship.OwnerMSP = newOwnerMSP
 	ship.LastUpdate = time.Now()
 	bytes, _ := json.Marshal(ship)
+
+	if err := ctx.GetStub().SetEvent("TransferOwnership", bytes); err != nil {
+		return fmt.Errorf("failed to set TransferOwnership event: %v", err)
+	}
+
 	return ctx.GetStub().PutState(id, bytes)
 }
 
