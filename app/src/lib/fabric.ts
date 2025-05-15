@@ -11,6 +11,7 @@ import {
     Contract,
     signers,
 } from '@hyperledger/fabric-gateway';
+import { Shipment } from '../types/shipment';
 
 //
 // Load all connection settings from env
@@ -20,6 +21,13 @@ const peerEndpoint = process.env.PEER_ENDPOINT!; // e.g. "peer0.manufacturer.exa
 const channelName = process.env.CHANNEL_NAME!; // e.g. "supplychain"
 const chaincodeName = process.env.CHAINCODE_NAME!; // e.g. "shipping"
 const cryptoPath = process.env.CRYPTO_PATH!; // e.g. "/crypto"
+
+function bufferToJson<T>(buf: Uint8Array): T {
+    // If it’s already a Buffer (Node), this is a no-op;
+    // if it’s a Uint8Array, Buffer.from will convert it.
+    const json = Buffer.from(buf).toString('utf8');
+    return JSON.parse(json) as T;
+}
 
 //
 // Build a new Gateway + Contract for each call
@@ -85,24 +93,9 @@ export async function getAllShipments(): Promise<any[]> {
         const resultBytes = await contract.evaluateTransaction(
             'GetAllShipments'
         );
-        const raw = resultBytes.toString().trim();
 
-        // If the chaincode returned literally "null" or an empty string, treat as []
-        if (raw === '' || raw === 'null') {
-            console.debug(
-                'GetAllShipments → empty or null payload, returning []'
-            );
-            return [];
-        }
-
-        // Otherwise attempt to parse JSON
-        try {
-            return JSON.parse(raw);
-        } catch (parseErr) {
-            console.error('GetAllShipments: invalid JSON payload:', raw);
-            return [];
-        }
-    } catch (err) {
+        return bufferToJson<Shipment[]>(resultBytes);
+    } catch (err: any) {
         console.error('getAllShipments error:', err);
         return [];
     } finally {
@@ -120,7 +113,8 @@ export async function getShipment(id: string): Promise<any | null> {
             'QueryShipment',
             id
         );
-        return JSON.parse(resultBytes.toString());
+
+        return bufferToJson<Shipment[]>(resultBytes);
     } catch (err: any) {
         console.error(`getShipment(${id}) error:`, err);
         return null;

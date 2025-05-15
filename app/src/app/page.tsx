@@ -21,8 +21,11 @@ export default function Home() {
       try {
         const blockData = JSON.parse(event.data);
         const writes = extractShipmentWrites(blockData);
+
+        console.log("IN USE EFFECT HERE")
         
         if (writes.length > 0) {
+          console.log("Detected, now gonna fetch")
           // If we detect changes to shipments, refresh the list
           fetchShipments();
           
