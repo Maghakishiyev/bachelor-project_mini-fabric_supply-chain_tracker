@@ -50,7 +50,7 @@ peer:
 
     # Gossip settings for the peer
     gossip:
-        bootstrap: 127.0.0.1:7051
+        bootstrap: peer0.manufacturer.example.com:7051
 
         # Enables gossip to pull blocks from other peers
         useLeaderElection: true

@@ -1,6 +1,6 @@
 {
   "address": "shipping-ccaas:9999",
-  "dial_timeout": "30s",
+  "dial_timeout": "60s",
   "tls_required": false,
   "client_auth_required": false
 }

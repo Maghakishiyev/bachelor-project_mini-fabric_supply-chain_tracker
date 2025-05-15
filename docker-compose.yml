@@ -1,4 +1,4 @@
-version: "3.9"
+version: "3"
 
 x-common: &common
   image: hyperledger/fabric-peer:${FABRIC_VERSION:-2.5.5}
@@ -88,6 +88,7 @@ services:
       - CORE_PEER_TLS_CERT_FILE=/var/hyperledger/fabric/config/tls/server.crt
       - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/fabric/config/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/config/tls/ca.crt
+      - FABRIC_LOGGING_SPEC=DEBUG
     volumes:
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/msp:/etc/hyperledger/fabric/msp
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls:/var/hyperledger/fabric/config/tls
@@ -299,14 +300,17 @@ services:
       - CORE_PEER_TLS_ENABLED=true
       - CORE_PEER_TLS_ROOTCERT_FILE=/crypto/ca.pem
     volumes:
-      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/signcerts/Admin@manufacturer.example.com-cert.pem:/crypto/signcerts/Admin@manufacturer.example.com-cert.pem:ro
+      # Map the admin certificate
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/signcerts/Admin@manufacturer.example.com-cert.pem:/crypto/admin-cert.pem:ro
-      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/keystore/priv_sk:/crypto/keystore/priv_sk:ro
+      # Map the admin private key
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/keystore/priv_sk:/crypto/admin-key.pem:ro
+      # Map the CA certificate for TLS
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt:/crypto/ca.pem:ro
+      # Map other MSP directories that might be needed for proper identity setup
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/cacerts:/crypto/cacerts:ro
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/signcerts:/crypto/signcerts:ro
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/admincerts:/crypto/admincerts:ro
+      - ./network/crypto-config/peerOrganizations/manufacturer.example.com/users/Admin@manufacturer.example.com/msp/keystore:/crypto/keystore:ro
     ports:
       - "3000:3000"
     depends_on:
@@ -320,7 +324,8 @@ services:
     container_name: shipping-ccaas
     image: golang:1.24
     working_dir: /app
-    command: bash -c "cd /app && go mod vendor && go build -o chaincode && CORE_CHAINCODE_ID_NAME=shipping:1.0 CORE_PEER_TLS_ENABLED=false ./chaincode"
+    # Added explicit IP address for listening
+    command: bash -c "cd /app && go mod vendor && go build -gcflags='-N -l' -o chaincode && CORE_CHAINCODE_ID_NAME=shipping:1.0 CORE_PEER_TLS_ENABLED=false FABRIC_LOGGING_SPEC=DEBUG ./chaincode"
     ports:
       - "9999:9999"
     volumes:
@@ -332,6 +337,25 @@ services:
       - CORE_PEER_TLS_ENABLED=false
       - CHAINCODE_SERVER_ADDRESS=0.0.0.0:9999
       - CHAINCODE_AS_A_SERVICE=true
+      - FABRIC_LOGGING_SPEC=DEBUG
+      - FABRIC_LOGGING_FORMAT=%{color}[%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}
+      - GO_UNBUFFERED=1
+    tty: true
+    stdin_open: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Enable host networking to simplify connectivity
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -an | grep 9999 | grep LISTEN"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Ensure proper access to the network
     depends_on:
       - peer0.manufacturer.example.com
 

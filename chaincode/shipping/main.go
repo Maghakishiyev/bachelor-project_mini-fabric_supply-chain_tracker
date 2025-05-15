@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -19,30 +20,30 @@ func (s *SmartContract) CreateShipment(ctx contractapi.TransactionContextInterfa
 	id, origin, destination string) error {
 
 	callerMSP, err := ctx.GetClientIdentity().GetMSPID()
-	fmt.Printf("CreateShipment called with id=%s, origin=%s, destination=%s from MSP: %s\n", 
+	log.Printf("CreateShipment called with id=%s, origin=%s, destination=%s from MSP: %s",
 		id, origin, destination, callerMSP)
-	
+
 	if err != nil {
-		fmt.Printf("Error getting MSP ID: %v\n", err)
+		log.Printf("Error getting MSP ID: %v", err)
 		return fmt.Errorf("error getting caller MSP ID: %v", err)
 	}
-	
+
 	if callerMSP != "ManufacturerMSP" { // only manufacturer starts the flow
-		fmt.Printf("Access denied: caller MSP %s not permitted, only ManufacturerMSP allowed\n", callerMSP)
+		log.Printf("Access denied: caller MSP %s not permitted, only ManufacturerMSP allowed", callerMSP)
 		return fmt.Errorf("caller MSP %s not permitted", callerMSP)
 	}
-	
+
 	exists, err := s.shipmentExists(ctx, id)
 	if err != nil {
-		fmt.Printf("Error checking if shipment exists: %v\n", err)
+		log.Printf("Error checking if shipment exists: %v", err)
 		return fmt.Errorf("error checking if shipment exists: %v", err)
 	}
-	
+
 	if exists {
-		fmt.Printf("Shipment %s already exists\n", id)
+		log.Printf("Shipment %s already exists", id)
 		return fmt.Errorf("shipment %s already exists", id)
 	}
-	
+
 	ship := Shipment{
 		ID:          id,
 		OwnerMSP:    callerMSP,
@@ -52,20 +53,20 @@ func (s *SmartContract) CreateShipment(ctx contractapi.TransactionContextInterfa
 		LastUpdate:  time.Now(),
 		DocsHash:    "", // Empty string but not omitted
 	}
-	
+
 	bytes, err := json.Marshal(ship)
 	if err != nil {
-		fmt.Printf("Error marshaling shipment: %v\n", err)
+		log.Printf("Error marshaling shipment: %v", err)
 		return fmt.Errorf("error marshaling shipment: %v", err)
 	}
-	
+
 	err = ctx.GetStub().PutState(id, bytes)
 	if err != nil {
-		fmt.Printf("Error putting state: %v\n", err)
+		log.Printf("Error putting state: %v", err)
 		return fmt.Errorf("error saving shipment: %v", err)
 	}
-	
-	fmt.Printf("Successfully created shipment: %s\n", id)
+
+	log.Printf("Successfully created shipment: %s", id)
 	return nil
 }
 
@@ -112,70 +113,77 @@ func (s *SmartContract) TransferOwnership(ctx contractapi.TransactionContextInte
 func (s *SmartContract) QueryShipment(ctx contractapi.TransactionContextInterface,
 	id string) (*Shipment, error) {
 
-	fmt.Printf("QueryShipment called for id=%s\n", id)
-	
+	log.Printf("QueryShipment called for id=%s", id)
+
 	callerMSP, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
-		fmt.Printf("Error getting MSP ID: %v\n", err)
+		log.Printf("Error getting MSP ID: %v", err)
 	} else {
-		fmt.Printf("QueryShipment called by org: %s\n", callerMSP)
+		log.Printf("QueryShipment called by org: %s", callerMSP)
 	}
 
 	bytes, err := ctx.GetStub().GetState(id)
 	if err != nil {
-		fmt.Printf("Error getting state for shipment %s: %v\n", id, err)
+		log.Printf("Error getting state for shipment %s: %v", id, err)
 		return nil, fmt.Errorf("error getting shipment %s: %v", id, err)
 	}
-	
+
 	if bytes == nil {
-		fmt.Printf("Shipment %s not found (no data)\n", id)
+		log.Printf("Shipment %s not found (no data)", id)
 		return nil, fmt.Errorf("shipment %s not found", id)
 	}
-	
+
 	var ship Shipment
 	err = json.Unmarshal(bytes, &ship)
 	if err != nil {
-		fmt.Printf("Error unmarshaling shipment %s: %v\n", id, err)
+		log.Printf("Error unmarshaling shipment %s: %v", id, err)
 		return nil, fmt.Errorf("error unmarshaling shipment %s: %v", id, err)
 	}
-	
-	fmt.Printf("Successfully queried shipment: %s\n", id)
+
+	log.Printf("Successfully queried shipment: %s", id)
 	return &ship, nil
 }
 
 func (s *SmartContract) GetAllShipments(ctx contractapi.TransactionContextInterface) ([]*Shipment, error) {
 	callerMSP, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
-		fmt.Printf("Error getting MSP ID in GetAllShipments: %v\n", err)
+		log.Printf("Error getting MSP ID in GetAllShipments: %v\n", err)
 	} else {
-		fmt.Printf("GetAllShipments called by org: %s\n", callerMSP)
+		log.Printf("GetAllShipments called by org: %s\n", callerMSP)
 	}
+
+	// IMPORTANT: Explicitly allow access for all MSPs
+	// There's no access control for this function - all organizations should be able to query all shipments
+	log.Printf("GetAllShipments granted to organization: %s", callerMSP)
+
+	// This function has no access control checks intentionally
+	// If your MSP is still getting "access denied" errors, there may be an issue with:
+	// 1. Certificate/identity configuration
+	// 2. Channel ACL policies
+	// 3. Endorsement policies at the chaincode level
+	shipments := make([]*Shipment, 0)
 
 	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
 	if err != nil {
-		fmt.Printf("Error getting state by range: %v\n", err)
 		return nil, fmt.Errorf("error querying all shipments: %v", err)
 	}
 	defer resultsIterator.Close()
 
-	var shipments []*Shipment
 	for resultsIterator.HasNext() {
-		queryResponse, err := resultsIterator.Next()
+		resp, err := resultsIterator.Next()
 		if err != nil {
-			fmt.Printf("Error getting next result: %v\n", err)
 			return nil, fmt.Errorf("error iterating through shipments: %v", err)
 		}
-
 		var ship Shipment
-		err = json.Unmarshal(queryResponse.Value, &ship)
-		if err != nil {
-			fmt.Printf("Error unmarshaling shipment: %v\n", err)
+		if err := json.Unmarshal(resp.Value, &ship); err != nil {
 			return nil, fmt.Errorf("error parsing shipment data: %v", err)
 		}
 		shipments = append(shipments, &ship)
 	}
 
-	fmt.Printf("GetAllShipments returning %d shipments\n", len(shipments))
+	// Now shipments is always a non-nil slice ([]*Shipment{}), even if zero-length
+	log.Printf("GetAllShipments returning %d shipments\n", len(shipments))
+	log.Print("Shipments", shipments)
 	return shipments, nil
 }
 
@@ -188,31 +196,72 @@ func (s *SmartContract) shipmentExists(ctx contractapi.TransactionContextInterfa
 
 /*  ───────  main  ───────  */
 func main() {
+	// Force all output to stderr for Docker to capture
+	// This ensures logs are captured by the Docker container
+	log.SetOutput(os.Stderr)
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+
+	// Write directly to stderr for immediate feedback
+	os.Stderr.WriteString("===== CHAINCODE STARTING UP =====\n")
+	log.Println("Chaincode starting up with verbose logging")
+
+	// Enable debug and verbose mode
+	debugMode := true
+
 	// Check if we should run as a server (CCAAS mode)
 	if os.Getenv("CHAINCODE_SERVER_ADDRESS") != "" {
+		os.Stderr.WriteString("===== RUNNING IN CCAAS MODE =====\n")
+		log.Println("Running in CCAAS mode")
+
 		// Run as a chaincode service
 		server, err := NewChaincodeServer()
 		if err != nil {
-			fmt.Printf("Error creating chaincode server: %s", err)
+			errorMsg := fmt.Sprintf("Error creating chaincode server: %s", err)
+			os.Stderr.WriteString("ERROR: " + errorMsg + "\n")
+			log.Printf(errorMsg)
 			os.Exit(1)
 		}
-		
-		fmt.Println("Starting chaincode server...")
+
+		log.Println("Starting chaincode server...")
+		os.Stderr.WriteString("===== STARTING CHAINCODE SERVER =====\n")
+
+		// Log configuration details for debugging
+		if debugMode {
+			log.Printf("Server config: ID=%s, Address=%s",
+				os.Getenv("CORE_CHAINCODE_ID_NAME"),
+				os.Getenv("CHAINCODE_SERVER_ADDRESS"))
+		}
+
 		if err := server.Start(); err != nil {
-			fmt.Printf("Error starting chaincode server: %s", err)
+			errorMsg := fmt.Sprintf("Error starting chaincode server: %s", err)
+			os.Stderr.WriteString("ERROR: " + errorMsg + "\n")
+			log.Printf(errorMsg)
 			os.Exit(1)
 		}
 	} else {
+		os.Stderr.WriteString("===== RUNNING IN STANDARD MODE =====\n")
+		log.Println("Running in standard chaincode mode")
+
 		// Run as a normal chaincode
 		cc, err := contractapi.NewChaincode(&SmartContract{})
 		if err != nil {
-			panic(err)
+			errorMsg := fmt.Sprintf("Error creating chaincode: %v", err)
+			os.Stderr.WriteString("ERROR: " + errorMsg + "\n")
+			log.Printf(errorMsg)
+			os.Exit(1)
 		}
 		cc.Info.Version = "1.0"
 		cc.Info.Title = "ShippingContract"
 		cc.Info.Description = "Proof-of-concept supply-chain chain-code"
+
+		log.Println("Starting chaincode in standard mode...")
+		os.Stderr.WriteString("===== STARTING CHAINCODE IN STANDARD MODE =====\n")
+
 		if err := cc.Start(); err != nil {
-			panic(err)
+			errorMsg := fmt.Sprintf("Error starting chaincode: %v", err)
+			os.Stderr.WriteString("ERROR: " + errorMsg + "\n")
+			log.Printf(errorMsg)
+			os.Exit(1)
 		}
 	}
 }

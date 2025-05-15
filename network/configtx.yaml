@@ -21,7 +21,7 @@ Organizations:
     Policies:
       Readers:
         Type: Signature
-        Rule: "OR('ManufacturerMSP.member')"
+        Rule: "OR('ManufacturerMSP.member', 'ManufacturerMSP.admin')"
       Writers:
         Type: Signature
         Rule: "OR('ManufacturerMSP.member')"
