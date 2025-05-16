@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Alert, Snackbar, Typography, Box } from '@mui/material';
-import { connectWS, extractShipmentWrites } from '@/src/lib/ws';
-import { BlockchainWrite } from '@/src/types/shipment';
+import { connectWS } from '@/src/lib/ws';
 
 export default function BlockToast() {
     const [open, setOpen] = useState(false);
@@ -11,36 +10,15 @@ export default function BlockToast() {
     const [shipmentIds, setShipmentIds] = useState<string[]>([]);
 
     useEffect(() => {
-        // Connect to WebSocket and listen for block events
-        connectWS((event) => {
-            try {
-                const blockData = JSON.parse(event.data);
-                console.log('Event is', event, blockData);
-                // Extract block number
-                const number = blockData?.header?.number;
-                if (number) {
-                    setBlockNumber(number);
-
-                    // Extract shipment IDs from write set
-                    const writes = extractShipmentWrites(blockData);
-                    if (writes.length > 0) {
-                        setShipmentIds(
-                            writes.map((w: BlockchainWrite) => w.key)
-                        );
-                    } else {
-                        setShipmentIds([]);
-                    }
-
-                    // Show notification
-                    setOpen(true);
-                }
-            } catch (error) {
-                console.error('Error processing WebSocket message:', error);
-            }
+        // subscribe to our simplified WSMessage
+        const { unsubscribe } = connectWS(({ blockNumber, payload }) => {
+            setBlockNumber(blockNumber);
+            setShipmentIds([payload?.id]);
+            setOpen(true);
         });
 
         return () => {
-            // Clean up WebSocket connection (handled by ws.ts)
+            unsubscribe();
         };
     }, []);
 
