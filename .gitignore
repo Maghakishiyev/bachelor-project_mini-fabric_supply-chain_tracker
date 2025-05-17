@@ -152,8 +152,3 @@ docs/run.raw.json
 docs/tps_latency.csv
 docs/tps_latency.png
 docs/latency_distribution.png
-
-# Claude files
-CLAUDE.md
-CLAUDE_SESSION.md
-troubleshooting_session_summary.md

@@ -421,12 +421,6 @@ metrics: loadtest
 	@python scripts/analyse/plot.py
 	@echo "CSV → docs/tps_latency.csv  |  PNG → docs/tps_latency.png"
 
-# Run k6 load test (optional)
-k6-test:
-	@echo "▶ running k6 load test"
-	@docker run --network host --rm -v $(PWD):/scripts grafana/k6:latest run /scripts/loadtest/k6.js
-
-
 # Start Prometheus and Grafana for monitoring
 monitoring:
 	@echo "Starting monitoring stack..."
