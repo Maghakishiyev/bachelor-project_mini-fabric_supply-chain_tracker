@@ -1,371 +1,281 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "datasource",
-          "uid": "grafana"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "target": {
-          "limit": 100,
-          "matchAny": false,
-          "tags": [],
-          "type": "dashboard"
-        },
-        "type": "dashboard"
-      }
-    ]
-  },
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "links": [],
-  "liveNow": false,
-  "panels": [
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "P1809F7CD0C75ACF3"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 0
-      },
-      "id": 2,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "title": "Transactions Per Second",
-      "type": "timeseries"
+    "uid": "fabric-detailed",
+    "title": "Hyperledger Fabric Detailed Performance",
+    "tags": ["fabric", "performance", "monitoring"],
+    "timezone": "",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "5s",
+    "time": {
+        "from": "now-1h",
+        "to": "now"
     },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "P1809F7CD0C75ACF3"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
+    "panels": [
+        {
+            "id": 1,
+            "title": "Peers Up (%)",
+            "type": "stat",
+            "gridPos": { "x": 0, "y": 0, "w": 12, "h": 6 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "avg(up{job=\"fabric_peers\"}) * 100",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "orientation": "auto",
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": ["mean"],
+                    "fields": "",
+                    "include": {}
+                }
             }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "ms"
         },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 0
-      },
-      "id": 4,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "title": "Block Commit Latency",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "P1809F7CD0C75ACF3"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
+        {
+            "id": 2,
+            "title": "Orderer Up (%)",
+            "type": "stat",
+            "gridPos": { "x": 12, "y": 0, "w": 12, "h": 6 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "avg(up{job=\"orderer\"}) * 100",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "orientation": "auto",
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": ["mean"],
+                    "fields": "",
+                    "include": {}
+                }
             }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
         },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 8
-      },
-      "id": 6,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+        {
+            "id": 3,
+            "title": "Ledger Block Height",
+            "type": "timeseries",
+            "gridPos": { "x": 0, "y": 6, "w": 12, "h": 6 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "max(ledger_blockchain_height) by (instance)",
+                    "refId": "A",
+                    "legendFormat": "{{instance}}"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": { "unit": "none" },
+                "overrides": []
+            },
+            "options": { "tooltip": { "mode": "single" } }
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "title": "Memory Usage",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "P1809F7CD0C75ACF3"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
+        {
+            "id": 4,
+            "title": "Consensus Cluster Size",
+            "type": "stat",
+            "gridPos": { "x": 12, "y": 6, "w": 12, "h": 6 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "consensus_etcdraft_cluster_size",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "orientation": "auto",
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"]
+                }
             }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "percentunit"
         },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 8
-      },
-      "id": 8,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+        {
+            "id": 5,
+            "title": "Transactions Per Second",
+            "type": "timeseries",
+            "gridPos": { "x": 0, "y": 12, "w": 12, "h": 6 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum(rate(broadcast_processed_count[1m]))",
+                    "refId": "A",
+                    "legendFormat": "TPS"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": { "unit": "short" },
+                "overrides": []
+            },
+            "options": { "tooltip": { "mode": "single" } }
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
+        {
+            "id": 6,
+            "title": "Block Commit Latency (p95)",
+            "type": "timeseries",
+            "gridPos": { "x": 12, "y": 12, "w": 12, "h": 6 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, sum(rate(ledger_block_processing_time_bucket[5m])) by (le)) * 1000",
+                    "refId": "A",
+                    "legendFormat": "p95 ms"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": { "unit": "ms" },
+                "overrides": []
+            },
+            "options": { "tooltip": { "mode": "single" } }
+        },
+        {
+            "id": 7,
+            "title": "Endorser Proposal Latency (p95)",
+            "type": "timeseries",
+            "gridPos": { "x": 0, "y": 18, "w": 12, "h": 6 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, sum(rate(endorser_proposal_duration_bucket[5m])) by (le)) * 1000",
+                    "refId": "A",
+                    "legendFormat": "p95 ms"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": { "unit": "ms" },
+                "overrides": []
+            },
+            "options": { "tooltip": { "mode": "single" } }
+        },
+        {
+            "id": 8,
+            "title": "Chaincode Shim Request Latency (p95)",
+            "type": "timeseries",
+            "gridPos": { "x": 12, "y": 18, "w": 12, "h": 6 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, sum(rate(chaincode_shim_request_duration_bucket[5m])) by (le)) * 1000",
+                    "refId": "A",
+                    "legendFormat": "p95 ms"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": { "unit": "ms" },
+                "overrides": []
+            },
+            "options": { "tooltip": { "mode": "single" } }
+        },
+        {
+            "id": 9,
+            "title": "CouchDB Processing Time (p95)",
+            "type": "timeseries",
+            "gridPos": { "x": 0, "y": 24, "w": 12, "h": 6 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, sum(rate(couchdb_processing_time_bucket[5m])) by (le)) * 1000",
+                    "refId": "A",
+                    "legendFormat": "p95 ms"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": { "unit": "ms" },
+                "overrides": []
+            },
+            "options": { "tooltip": { "mode": "single" } }
+        },
+        {
+            "id": 10,
+            "title": "CPU Usage (%)",
+            "type": "timeseries",
+            "gridPos": { "x": 12, "y": 24, "w": 12, "h": 6 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum(rate(process_cpu_seconds_total[1m])) by (instance) * 100",
+                    "refId": "A",
+                    "legendFormat": "{{instance}}"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": { "unit": "percent" },
+                "overrides": []
+            },
+            "options": { "tooltip": { "mode": "single" } }
+        },
+        {
+            "id": 11,
+            "title": "Peer RSS Memory (bytes)",
+            "type": "timeseries",
+            "gridPos": { "x": 0, "y": 30, "w": 12, "h": 6 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "sum(process_resident_memory_bytes{job=\"fabric_peers\"}) by (instance)",
+                    "refId": "A",
+                    "legendFormat": "{{instance}}"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": { "unit": "bytes" },
+                "overrides": []
+            },
+            "options": { "tooltip": { "mode": "single" } }
+        },
+        {
+          "id": 12,
+          "title": "Go Heap Alloc (bytes)",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 30, "w": 12, "h": 6 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(go_memstats_alloc_bytes{job=\"fabric_peers\"}) by (instance)",
+              "refId": "A",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "bytes" },
+            "overrides": []
+          },
+          "options": { "tooltip": { "mode": "single" } }
+        },
+        {
+            "id": 13,
+            "title": "Go Routines",
+            "type": "timeseries",
+            "gridPos": { "x": 12, "y": 30, "w": 12, "h": 6 },
+            "datasource": "Prometheus",
+            "targets": [
+                {
+                    "expr": "go_goroutines",
+                    "refId": "A",
+                    "legendFormat": "goroutines"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": { "unit": "none" },
+                "overrides": []
+            },
+            "options": { "tooltip": { "mode": "single" } }
         }
-      },
-      "title": "CPU Usage",
-      "type": "timeseries"
-    }
-  ],
-  "refresh": "5s",
-  "schemaVersion": 38,
-  "style": "dark",
-  "tags": [],
-  "templating": {
-    "list": []
-  },
-  "time": {
-    "from": "now-15m",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "",
-  "title": "Hyperledger Fabric Performance",
-  "uid": "fabric-performance",
-  "version": 1,
-  "weekStart": ""
+    ],
+    "templating": { "list": [] },
+    "annotations": { "list": [] },
+    "links": [],
+    "style": "dark"
 }

@@ -1,9 +1,9 @@
 apiVersion: 1
 
 providers:
-  - name: 'Default'
+  - name: 'fabric-perf'
     orgId: 1
-    folder: ''
+    folder: 'Hyperledger Fabric'
     type: file
     disableDeletion: false
     updateIntervalSeconds: 10
