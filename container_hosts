@@ -1,6 +1,9 @@
 127.0.0.1 localhost
+172.18.0.13 cli
+172.18.0.10 grafana
+172.18.0.8 peer0.retailer.example.com
+172.18.0.11 peer0.warehouse.example.com 
+172.18.0.12 peer0.transporter.example.com
+172.18.0.9 peer0.manufacturer.example.com
+172.18.0.7 prometheus
 172.18.0.6 orderer.example.com
-172.18.0.8 peer0.manufacturer.example.com
-172.18.0.9 peer0.transporter.example.com
-172.18.0.7 peer0.warehouse.example.com
-172.18.0.10 peer0.retailer.example.com

@@ -56,6 +56,8 @@ services:
       - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
       - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
       - ORDERER_OPERATIONS_TLS_ENABLED=false
+      - ORDERER_METRICS_PROVIDER=prometheus
+      - ORDERER_OPERATIONS_LISTENADDRESS=0.0.0.0:9444
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric
     command: orderer
     volumes:
@@ -64,6 +66,7 @@ services:
       - ./network/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls:/var/hyperledger/orderer/tls
     ports:
       - "7050:7050"
+      - "9444:9444"
     networks:
       - fabric
 
@@ -89,12 +92,16 @@ services:
       - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/fabric/config/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/config/tls/ca.crt
       - FABRIC_LOGGING_SPEC=DEBUG
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9443
+      - CORE_OPERATIONS_TLS_ENABLED=false
     volumes:
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/msp:/etc/hyperledger/fabric/msp
       - ./network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls:/var/hyperledger/fabric/config/tls
       - ./network/crypto-config:/etc/hyperledger/fabric/crypto-config
     ports:
       - "7051:7051"
+      - "9445:9443"
     depends_on:
       - couchdb1
     networks:
@@ -127,12 +134,16 @@ services:
       - CORE_PEER_TLS_CERT_FILE=/var/hyperledger/fabric/config/tls/server.crt
       - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/fabric/config/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/config/tls/ca.crt
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9443
+      - CORE_OPERATIONS_TLS_ENABLED=false
     volumes:
       - ./network/crypto-config/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/msp:/etc/hyperledger/fabric/msp
       - ./network/crypto-config/peerOrganizations/transporter.example.com/peers/peer0.transporter.example.com/tls:/var/hyperledger/fabric/config/tls
       - ./network/crypto-config:/etc/hyperledger/fabric/crypto-config
     ports:
       - "8051:8051"
+      - "9446:9443"
     depends_on:
       - couchdb2
     networks:
@@ -165,12 +176,16 @@ services:
       - CORE_PEER_TLS_CERT_FILE=/var/hyperledger/fabric/config/tls/server.crt
       - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/fabric/config/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/config/tls/ca.crt
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9443
+      - CORE_OPERATIONS_TLS_ENABLED=false
     volumes:
       - ./network/crypto-config/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/msp:/etc/hyperledger/fabric/msp
       - ./network/crypto-config/peerOrganizations/warehouse.example.com/peers/peer0.warehouse.example.com/tls:/var/hyperledger/fabric/config/tls
       - ./network/crypto-config:/etc/hyperledger/fabric/crypto-config
     ports:
       - "9051:9051"
+      - "9447:9443"
     depends_on:
       - couchdb3
     networks:
@@ -203,12 +218,16 @@ services:
       - CORE_PEER_TLS_CERT_FILE=/var/hyperledger/fabric/config/tls/server.crt
       - CORE_PEER_TLS_KEY_FILE=/var/hyperledger/fabric/config/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/var/hyperledger/fabric/config/tls/ca.crt
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9443
+      - CORE_OPERATIONS_TLS_ENABLED=false
     volumes:
       - ./network/crypto-config/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/msp:/etc/hyperledger/fabric/msp
       - ./network/crypto-config/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls:/var/hyperledger/fabric/config/tls
       - ./network/crypto-config:/etc/hyperledger/fabric/crypto-config
     ports:
       - "10051:10051"
+      - "9448:9443"
     depends_on:
       - couchdb4
     networks:
@@ -358,6 +377,36 @@ services:
     # Ensure proper access to the network
     depends_on:
       - peer0.manufacturer.example.com
+
+# PROMETHEUS & GRAFANA
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - fabric
+
+  grafana:
+    image: grafana/grafana:11.0.2
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - ./monitoring/dashboards:/var/lib/grafana/dashboards
+      - ./monitoring/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    ports:
+      - "3002:3000"
+    restart: unless-stopped
+    networks:
+      - fabric
 
 networks:
   fabric:

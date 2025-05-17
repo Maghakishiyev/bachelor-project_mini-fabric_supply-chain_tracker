@@ -8,7 +8,7 @@ export PATH := $(shell pwd)/bin:$(PATH)
 export RATE ?= 20
 export SECONDS ?= 300
 
-.PHONY: generate network-up network-down channel-create channel-join clean cc-vendor cc-package cc-install cc-approve cc-commit cc-deploy cc-test wallets logs all listener-up app-up loadtest metrics video monitoring monitoring-down full-stack
+.PHONY: generate network-up network-down channel-create channel-join clean cc-vendor cc-package cc-install cc-approve cc-commit cc-deploy cc-test wallets logs all listener-up app-up loadtest metrics monitoring monitoring-down full-stack
 
 # Generate crypto material
 generate:
@@ -21,7 +21,8 @@ network-up:
 	@docker-compose up -d --build orderer.example.com \
 		peer0.manufacturer.example.com peer0.transporter.example.com \
 		peer0.warehouse.example.com peer0.retailer.example.com \
-		cli
+		cli \
+		prometheus grafana
 	@echo "Fabric network started"
 
 # Stop and remove containers
@@ -389,6 +390,7 @@ all: generate network-up
 	@$(MAKE) wallets
 	@$(MAKE) listener-up
 	@$(MAKE) app-up
+	@$(MAKE) monitoring
 
 # ============ NEW TARGETS FOR PART 4 ============
 
@@ -424,16 +426,11 @@ k6-test:
 	@echo "▶ running k6 load test"
 	@docker run --network host --rm -v $(PWD):/scripts grafana/k6:latest run /scripts/loadtest/k6.js
 
-# Video demo placeholder command
-video:
-	@echo "🎥  Record with OBS → docs/demo.mp4"
-	@echo "Please record a demonstration video of your supply chain system"
-	@echo "Save it as docs/demo.mp4"
 
 # Start Prometheus and Grafana for monitoring
 monitoring:
 	@echo "Starting monitoring stack..."
-	@docker-compose -f monitoring/docker-compose.yml up -d
+	@docker-compose up -d prometheus grafana
 	@echo "Monitoring stack started"
 	@echo "Grafana: http://localhost:3002 (admin/admin)"
 	@echo "Prometheus: http://localhost:9090"
@@ -441,46 +438,5 @@ monitoring:
 # Stop monitoring stack
 monitoring-down:
 	@echo "Stopping monitoring stack..."
-	@docker-compose -f monitoring/docker-compose.yml down -v
+	@docker-compose stop prometheus grafana
 	@echo "Monitoring stack stopped"
-
-# Start the full stack with one command
-full-stack:
-	@echo "Starting complete supply chain system..."
-	@echo "Step 1: Cleaning up previous deployments..."
-	@$(MAKE) clean
-	
-	@echo "Step 2: Generating crypto materials..."
-	@$(MAKE) generate
-	
-	@echo "Step 3: Starting Hyperledger Fabric network..."
-	@docker-compose -f docker-compose.full.yml up -d --build orderer.example.com peer0.manufacturer.example.com peer0.transporter.example.com peer0.warehouse.example.com peer0.retailer.example.com couchdb1 couchdb2 couchdb3 couchdb4 cli
-	@sleep 15
-	@docker cp network/crypto-config cli:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config
-	
-	@echo "Step 4: Creating channel and joining peers..."
-	@$(MAKE) channel-create
-	@sleep 5
-	@$(MAKE) channel-join
-	
-	@echo "Step 5: Deploying chaincode..."
-	@$(MAKE) cc-deploy
-	@sleep 10
-	
-	@echo "Step 6: Preparing wallet files..."
-	@$(MAKE) wallets
-	
-	@echo "Step 7: Starting services (listener, frontend)..."
-	@docker-compose -f docker-compose.full.yml up -d listener app
-	
-	@echo "Step 8: Starting monitoring stack..."
-	@docker-compose -f monitoring/docker-compose.yml up -d
-	
-	@echo "✅ Full stack deployment complete!"
-	@echo "- Frontend: http://localhost:3000"
-	@echo "- Event WebSocket: ws://localhost:3001/ws"
-	@echo "- Grafana: http://localhost:3002 (admin/admin)"
-	@echo "- Prometheus: http://localhost:9090"
-	@echo ""
-	@echo "To run a load test, use: make loadtest"
-	@echo "To generate metrics after running a test: make metrics"
