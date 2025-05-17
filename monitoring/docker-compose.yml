@@ -9,6 +9,7 @@ services:
     restart: unless-stopped
     networks:
       - monitoring-net
+      - fabric
 
   grafana:
     image: grafana/grafana:11.0.2
@@ -26,7 +27,11 @@ services:
     restart: unless-stopped
     networks:
       - monitoring-net
+      - fabric
 
 networks:
   monitoring-net:
     driver: bridge
+  fabric:
+    external: true
+    name: fabric_network

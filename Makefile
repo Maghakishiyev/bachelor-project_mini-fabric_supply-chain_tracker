@@ -325,17 +325,24 @@ cc-test-invoke:
 		-C $(APP_CHANNEL) -n $(CHAINCODE_NAME) \
 		--peerAddresses peer0.manufacturer.example.com:7051 \
 		--tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls/ca.crt \
-		-c '{"function":"CreateShipment","Args":["SHIP001", "Warsaw", "Berlin"]}'
+		-c '{"function":"CreateShipment","Args":["SHIP33", "Warsaw", "Berlin"]}'
 	@echo "Test shipment created"
 
 # Query test shipment
 cc-test-query:
-	@echo "Querying test shipment..."
-	@docker exec -e "CORE_PEER_LOCALMSPID=RetailerMSP" \
-		-e "CORE_PEER_ADDRESS=peer0.retailer.example.com:10051" \
-		-e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt" \
-		cli peer chaincode query -C $(APP_CHANNEL) -n $(CHAINCODE_NAME) \
-		-c '{"function":"QueryShipment","Args":["SHIP001"]}'
+	@echo "Querying test shipment (as Retailer)..."
+	@sleep 10
+	@docker exec \
+	  -e "CORE_PEER_LOCALMSPID=RetailerMSP" \
+	  -e "CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/users/Admin@retailer.example.com/msp" \
+	  -e "CORE_PEER_ADDRESS=peer0.retailer.example.com:10051" \
+	  -e "CORE_PEER_TLS_ENABLED=true" \
+	  -e "CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt" \
+	  cli peer chaincode query \
+	    --tls \
+	    --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/retailer.example.com/peers/peer0.retailer.example.com/tls/ca.crt \
+	    -C $(APP_CHANNEL) -n $(CHAINCODE_NAME) \
+	    -c '{"function":"QueryShipment","Args":["SHIP33"]}'
 
 # Prepare wallet files for all organizations
 wallets:
@@ -385,12 +392,25 @@ all: generate network-up
 
 # ============ NEW TARGETS FOR PART 4 ============
 
-# Run load testing with transaction generator
+# Run load testing with transaction generator in Docker
 loadtest:
 	@echo "▶ running generator ($(RATE) tx/s for $(SECONDS)s)"
 	@mkdir -p docs
-	@cd app && RATE=$(RATE) SECONDS=$(SECONDS) node -r ts-node/register ../scripts/loadtest/gen.ts \
-		| tee ../docs/run.raw.json
+	@echo "Building loadtest container..."
+	@cd scripts/loadtest && docker build -t fabric-loadtest .
+	@echo "Running load test..."
+	@docker run --rm \
+		--network=fabric_network \
+		-v $(PWD)/network/wallets/manufacturer/admin:/crypto \
+		-v $(PWD)/network/crypto-config/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com/tls:/tls \
+		-e RATE=$(RATE) \
+		-e SECONDS=$(SECONDS) \
+		-e MSP_ID=ManufacturerMSP \
+		-e PEER_ENDPOINT=peer0.manufacturer.example.com:7051 \
+		-e CERT_PATH=/crypto/cert.pem \
+		-e KEY_PATH=/crypto/key.pem \
+		-e TLS_CERT_PATH=/tls/ca.crt \
+		fabric-loadtest | tee docs/run.raw.json
 
 # Process metrics and generate visualizations
 metrics: loadtest
@@ -427,8 +447,40 @@ monitoring-down:
 # Start the full stack with one command
 full-stack:
 	@echo "Starting complete supply chain system..."
-	@docker-compose -f docker-compose.full.yml up -d --build
-	@echo "Supply chain system started"
-	@echo "Frontend: http://localhost:3000"
-	@echo "Event WebSocket: ws://localhost:3001/ws"
-	@echo "Grafana: http://localhost:3002 (admin/admin)"
+	@echo "Step 1: Cleaning up previous deployments..."
+	@$(MAKE) clean
+	
+	@echo "Step 2: Generating crypto materials..."
+	@$(MAKE) generate
+	
+	@echo "Step 3: Starting Hyperledger Fabric network..."
+	@docker-compose -f docker-compose.full.yml up -d --build orderer.example.com peer0.manufacturer.example.com peer0.transporter.example.com peer0.warehouse.example.com peer0.retailer.example.com couchdb1 couchdb2 couchdb3 couchdb4 cli
+	@sleep 15
+	@docker cp network/crypto-config cli:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config
+	
+	@echo "Step 4: Creating channel and joining peers..."
+	@$(MAKE) channel-create
+	@sleep 5
+	@$(MAKE) channel-join
+	
+	@echo "Step 5: Deploying chaincode..."
+	@$(MAKE) cc-deploy
+	@sleep 10
+	
+	@echo "Step 6: Preparing wallet files..."
+	@$(MAKE) wallets
+	
+	@echo "Step 7: Starting services (listener, frontend)..."
+	@docker-compose -f docker-compose.full.yml up -d listener app
+	
+	@echo "Step 8: Starting monitoring stack..."
+	@docker-compose -f monitoring/docker-compose.yml up -d
+	
+	@echo "✅ Full stack deployment complete!"
+	@echo "- Frontend: http://localhost:3000"
+	@echo "- Event WebSocket: ws://localhost:3001/ws"
+	@echo "- Grafana: http://localhost:3002 (admin/admin)"
+	@echo "- Prometheus: http://localhost:9090"
+	@echo ""
+	@echo "To run a load test, use: make loadtest"
+	@echo "To generate metrics after running a test: make metrics"
