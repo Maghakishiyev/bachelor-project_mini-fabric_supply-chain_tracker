@@ -147,8 +147,3 @@ bin/
 **/vendor/
 chaincode/shipping/go.sum
 
-# Build artifacts
-docs/run.raw.json
-docs/tps_latency.csv
-docs/tps_latency.png
-docs/latency_distribution.png
